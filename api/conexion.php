@@ -10,20 +10,23 @@ function conectarBD(): PDO {
 
     $options = [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION];
     $caFile = null;
-    $caPem = getenv('DB_SSL_CA_PEM');
-    if ($caPem) {
-        $caFile = tempnam(sys_get_temp_dir(), 'custodia-ca-');
-        if ($caFile === false || file_put_contents($caFile, $caPem) === false) {
-            throw new PDOException('No se pudo preparar el certificado de la base de datos.');
-        }
-        $options[PDO::MYSQL_ATTR_SSL_CA] = $caFile;
-        $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
-    }
-
     try {
+        $caPem = getenv('DB_SSL_CA_PEM');
+        if ($caPem) {
+            $caFile = tempnam(sys_get_temp_dir(), 'custodia-ca-');
+            if ($caFile === false || file_put_contents($caFile, $caPem) === false) {
+                throw new PDOException('No se pudo preparar el certificado de la base de datos.');
+            }
+            $options[PDO::MYSQL_ATTR_SSL_CA] = $caFile;
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = true;
+        }
+
         return new PDO("mysql:host=$host;port=$port;dbname=$dbname;charset=utf8mb4", $user, $password, $options);
+    } catch (PDOException $e) {
+        error_log('Error de conexión a la base de datos: ' . $e->getMessage());
+        throw $e;
     } finally {
-        if ($caFile !== null) unlink($caFile);
+        if (is_string($caFile)) unlink($caFile);
     }
 }
 
@@ -35,7 +38,6 @@ if (isset($_SERVER['SCRIPT_FILENAME']) && realpath($_SERVER['SCRIPT_FILENAME']) 
         echo json_encode(['status' => 'success', 'mensaje' => 'Conexión con la base de datos establecida.']);
     } catch (PDOException $e) {
         http_response_code(503);
-        error_log('Error de conexión a la base de datos: ' . $e->getMessage());
         echo json_encode(['status' => 'error', 'mensaje' => 'No se pudo conectar con la base de datos.']);
     }
 }
