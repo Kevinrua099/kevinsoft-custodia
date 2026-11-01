@@ -110,6 +110,13 @@ CREATE TABLE inspeccion_fotos (
   FOREIGN KEY (id_inspeccion) REFERENCES inspeccion_vehiculos (id_inspeccion) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE inspeccion_fotos_archivo (
+  id_foto int NOT NULL PRIMARY KEY,
+  tipo_mime varchar(30) NOT NULL,
+  contenido LONGBLOB NOT NULL,
+  FOREIGN KEY (id_foto) REFERENCES inspeccion_fotos (id_foto) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE registro_bandidas (
   id_registro int NOT NULL AUTO_INCREMENT PRIMARY KEY,
   alias varchar(100) NOT NULL,

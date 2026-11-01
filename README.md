@@ -7,7 +7,7 @@ Proyecto de presentación con una consola web, una API PHP/MySQL y una aplicaci�
 - `web/`: interfaz web en HTML, CSS y JavaScript.
 - `api/`: API PHP y conexión MySQL.
 - `Custodia_App/`: aplicación Android (Kotlin y Jetpack Compose).
-- `database/schema.sql`: estructura vacía de MySQL, sin datos personales.
+- `database/schema.sql`: estructura vacía de MySQL, sin datos personales. Para una base existente, `database/patrullas_migration.sql` agrega el almacenamiento de fotos de patrullas sin borrar datos.
 - `Dockerfile` y `render.yaml`: configuración para desplegar en Render.
 - `CONEXION.md`: detalles de conexión local y Android.
 
@@ -27,7 +27,7 @@ Render ejecuta la web y la API como un **Web Service Docker**. La aplicación us
 ### 1. Preparar MySQL
 
 1. Crea una cuenta en Aiven, crea un servicio **MySQL** y espera a que indique **Running**. En **Overview / Quick connect** copia host, puerto, base de datos, usuario y contraseña. Descarga también el certificado CA del servicio.
-2. Con MySQL Workbench o HeidiSQL conecta con TLS usando el certificado CA. Importa `database/schema.sql` en la base de datos nueva del servicio (habitualmente `defaultdb`). La importación crea tablas vacías; **no copia el usuario ni los datos de tu PC**.
+2. Con MySQL Workbench o HeidiSQL conecta con TLS usando el certificado CA. Importa `database/schema.sql` en la base de datos nueva del servicio (habitualmente `defaultdb`). La importación crea tablas vacías; **no copia el usuario ni los datos de tu PC**. Si ya habías importado el esquema antes de incorporar Control de Patrullas, ejecuta solo `database/patrullas_migration.sql` en esa base.
 3. Crea un usuario de presentación en la tabla `usuarios`. Genera primero un hash con PHP instalado localmente:
 
    ```powershell
@@ -74,6 +74,6 @@ Instala `Custodia_App/app/build/outputs/apk/debug/app-debug.apk` en el teléfono
 ## Límites de la presentación
 
 - La base de datos y los archivos locales no se suben automáticamente. El repositorio excluye evidencias, fotos, credenciales, archivos locales de Android y compilaciones.
-- En Render Free, el servicio se suspende tras un periodo de inactividad y puede tardar en despertar. Sus archivos subidos se pierden al reiniciar, redesplegar o suspender; para conservar evidencias se necesita almacenamiento externo o un disco persistente compatible con un plan de pago.
+- En Render Free, el servicio se suspende tras un periodo de inactividad y puede tardar en despertar. Las nuevas fotos de inspección de patrullas se guardan en MySQL; los demás archivos subidos se pierden al reiniciar, redesplegar o suspender y necesitan almacenamiento externo o un disco persistente.
 - Los endpoints todavía no verifican una sesión ni permisos en el servidor, y el flujo de reportes Android contiene partes simuladas y una ruta fija. Usa solo datos ficticios para la presentación y no lo emplees con datos reales hasta implementar autenticación y permisos completos.
 - El esquema vacío no incluye una cuenta inicial: crea el usuario de prueba como se indica arriba. Las credenciales de MySQL son distintas de las de acceso a KevinSoft.

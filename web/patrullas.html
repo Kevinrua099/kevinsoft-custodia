@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KevinSoft - Control de Patrullas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/global.css" rel="stylesheet">
+    <link href="css/patrullas.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <aside class="col-md-2 sidebar" aria-label="Navegación principal">
+                <div class="text-center mb-4">
+                    <h4 class="text-warning fw-bold">KEVINSOFT</h4>
+                    <small class="text-muted">Consola Central</small>
+                </div>
+                <a href="dashboard.html">📊 Panel General</a>
+                <a href="armeria.html">🛡️ Control de Armería</a>
+                <a href="salvoconductos.html">📄 Salvoconductos</a>
+                <a href="reportes.html">🚚 Reportes en Ruta</a>
+                <a href="patrullas.html" class="active" aria-current="page">🚓 Control de Patrullas</a>
+                <a href="nomina.html">👥 Nómina de Personal</a>
+                <a href="bandidas.html">🎯 Registro Especial</a>
+                <a href="#" class="text-danger mt-4" id="btnCerrarSesion">🚪 Cerrar Sesión</a>
+                <div class="sidebar-copy">&copy; 2026 <span>KevinSoft</span><br>Todos los derechos reservados</div>
+            </aside>
+
+            <main class="col-md-10 main-content">
+                <div class="topbar d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 fw-bold">Control de Patrullas</h5>
+                    <div class="text-primary fw-bold" id="nombreUsuarioTop"></div>
+                </div>
+
+                <div class="patrullas-content">
+                    <section class="patrullas-hero" aria-labelledby="titulo-patrullas">
+                        <div>
+                            <span class="hero-tag">CONTROL OPERATIVO</span>
+                            <h1 id="titulo-patrullas">Recepción de patrullas</h1>
+                            <p>Consulta el historial, revisa novedades y registra el estado de cada vehículo.</p>
+                        </div>
+                        <a href="#nueva-inspeccion" class="hero-action">＋ Nueva inspección</a>
+                    </section>
+
+                    <section class="patrullas-stats" aria-label="Resumen de inspecciones cargadas">
+                        <div class="patrulla-stat"><span class="stat-icon stat-blue">🚓</span><div><span>Inspecciones</span><strong id="statInspecciones">—</strong><small>Registros cargados</small></div></div>
+                        <div class="patrulla-stat"><span class="stat-icon stat-amber">▦</span><div><span>Patrullas</span><strong id="statVehiculos">—</strong><small>Placas registradas</small></div></div>
+                        <div class="patrulla-stat"><span class="stat-icon stat-red">!</span><div><span>Con novedades</span><strong id="statNovedades">—</strong><small>Con observaciones</small></div></div>
+                    </section>
+
+                    <div class="patrullas-layout">
+                        <section class="card-panel registro-panel" id="nueva-inspeccion" aria-labelledby="titulo-registro">
+                            <div class="section-heading">
+                                <div><span class="section-kicker">REGISTRO</span><h2 id="titulo-registro">Nueva inspección</h2><p>Completa los datos de recepción.</p></div>
+                            </div>
+                            <form id="formPatrulla">
+                                <div class="mb-3"><label class="form-label" for="placa">Placa *</label><input class="form-control" id="placa" name="placa" placeholder="Ej. GLT-2201" maxlength="20" required></div>
+                                <div class="mb-3"><label class="form-label" for="disco">Disco *</label><input class="form-control" id="disco" name="disco" placeholder="Ej. Patrulla 583" maxlength="50" required></div>
+                                <div class="mb-3"><label class="form-label" for="kilometraje">Kilometraje</label><div class="input-group"><input class="form-control" id="kilometraje" name="kilometraje" type="number" min="0" max="2147483647" step="1" inputmode="numeric" placeholder="Ej. 25400"><span class="input-group-text">km</span></div></div>
+                                <div class="mb-3"><label class="form-label" for="observaciones">Novedades y observaciones</label><textarea class="form-control" id="observaciones" name="observaciones" rows="3" placeholder="Describe el estado del vehículo"></textarea></div>
+                                <div class="mb-3"><label class="form-label" for="fotos">Fotos del vehículo</label><input class="form-control" type="file" id="fotos" accept="image/jpeg,image/png,image/webp" multiple><small class="form-help">Hasta 8 imágenes, máximo 2 MB cada una.</small></div>
+                                <div id="mensajeFormulario" class="form-feedback" role="status" aria-live="polite"></div>
+                                <button class="btn btn-primary w-100" id="btnGuardar" type="submit">Guardar inspección</button>
+                            </form>
+                        </section>
+
+                        <section class="card-panel historial-panel" aria-labelledby="titulo-historial">
+                            <div class="historial-header">
+                                <div><span class="section-kicker">SEGUIMIENTO</span><h2 id="titulo-historial">Historial de recepciones</h2><p>Hasta las 500 inspecciones más recientes.</p></div>
+                                <button type="button" id="btnActualizar" class="btn btn-outline-primary">↻ Actualizar</button>
+                            </div>
+                            <div class="search-row"><label class="visually-hidden" for="buscarPatrulla">Buscar inspecciones</label><input class="form-control" type="search" id="buscarPatrulla" placeholder="Buscar por placa, disco o responsable"><span id="resultadoBusqueda" aria-live="polite"></span></div>
+                            <div id="estadoHistorial" class="estado-historial" role="status" aria-live="polite">Cargando inspecciones...</div>
+                            <div class="table-responsive"><table class="table table-hover align-middle patrullas-table"><thead><tr><th>Patrulla</th><th>Recepción</th><th>Responsable</th><th>Estado</th><th><span class="visually-hidden">Detalles</span></th></tr></thead><tbody id="tablaPatrullas"></tbody></table></div>
+                        </section>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <dialog id="detallePatrulla" class="patrulla-dialog" aria-labelledby="detalleTitulo">
+        <div class="dialog-heading"><div><span class="section-kicker">DETALLE DE RECEPCIÓN</span><h2 id="detalleTitulo"></h2></div><button type="button" class="dialog-close" id="cerrarDetalle" aria-label="Cerrar detalle">×</button></div>
+        <div id="contenidoDetalle"></div>
+    </dialog>
+    <script src="js/patrullas.js"></script>
+</body>
+</html>
