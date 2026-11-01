@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KevinSoft - Reportes en Ruta</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- FontAwesome para los íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="css/global.css" rel="stylesheet">
+    <link href="css/reportes.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            <!-- Barra Lateral Fija -->
+            <div class="col-md-2 sidebar">
+                <div class="text-center mb-4">
+                    <h4 class="text-warning fw-bold">KEVINSOFT</h4>
+                    <small class="text-muted">Consola Central</small>
+                </div>
+                
+                <a href="dashboard.html">📊 Panel General</a>
+                <a href="armeria.html">🛡️ Control de Armería</a>
+                <a href="salvoconductos.html">📄 Salvoconductos</a>
+                <a href="reportes.html" class="active" aria-current="page">🚚 Reportes en Ruta</a>
+                <a href="patrullas.html">🚓 Control de Patrullas</a>
+                <a href="nomina.html">👥 Nómina de Personal</a>
+                <a href="bandidas.html">🎯 Registro Especial</a>
+                
+                <a href="#" class="text-danger mt-4" id="btnCerrarSesion">🚪 Cerrar Sesión</a>
+
+                <!-- Copyright fijado al fondo -->
+                <div class="sidebar-copy">
+                    &copy; 2026 <span>KevinSoft</span><br>Todos los derechos reservados
+                </div>
+            </div>
+
+            <!-- Contenido Principal -->
+            <div class="col-md-10 main-content">
+                <div class="topbar d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 text-secondary fw-bold">Monitor de Novedades y Pesca en Vivo</h5>
+                    <div class="text-primary fw-bold" id="nombreUsuarioTop">Cargando...</div>
+                </div>
+
+                <div class="p-4">
+                    <h4 class="mb-4 fw-bold"><i class="fas fa-satellite-dish me-2"></i> Feed de Operaciones</h4>
+                    
+                    <!-- CORRECCIÓN CLAVE: El ID debe ser feed-container para que JS lo encuentre -->
+                    <div id="feed-container">
+                        <div class="text-center mt-5">
+                            <div class="spinner-border text-primary" role="status"></div>
+                            <p class="mt-2 text-primary fw-bold">Cargando operaciones en vivo...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contenedor del Visor de Imágenes/Videos (Lightbox) -->
+    <div id="visorImagen" class="lightbox-overlay" onclick="cerrarVisor(event)">
+        <button type="button" class="lightbox-close" aria-label="Cerrar visor" onclick="cerrarVisor(event)">&times;</button>
+        <img id="imagenAmpliada" class="lightbox-content" alt="Evidencia ampliada">
+        <a id="descargarImagen" class="lightbox-download" target="_blank" rel="noopener">Abrir imagen original</a>
+    </div>
+    <div id="notificaciones" class="notificaciones-container" aria-live="polite"></div>
+
+    <!-- Scripts necesarios -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- CORRECCIÓN AQUÍ: Quita los dos puntos y la barra (../) -->
+    <script src="js/reportes.js"></script>
+</body>
+</html>

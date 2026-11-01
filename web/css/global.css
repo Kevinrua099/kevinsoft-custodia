@@ -1,0 +1,174 @@
+/* css/global.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+body { 
+    background-color: #f1f5f9; 
+    font-family: 'Poppins', sans-serif;
+    color: #334155;
+    line-height: 1.55;
+}
+
+/* Barra Lateral (Sidebar) */
+.sidebar { 
+    height: 100vh;
+    height: 100dvh;
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%); 
+    color: white; 
+    padding-top: 25px; 
+    position: fixed; 
+    width: 250px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+}
+
+.sidebar h4 { font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+
+.sidebar a { 
+    color: #cbd5e1;
+    text-decoration: none; 
+    padding: 14px 25px; 
+    display: flex; 
+    align-items: center;
+    font-weight: 500; 
+    font-size: 0.95rem;
+    transition: all 0.3s ease; 
+    border-left: 4px solid transparent;
+}
+
+.sidebar a:hover { 
+    background-color: rgba(255,255,255,0.05); 
+    color: #ffffff; 
+    border-left: 4px solid #f59e0b; 
+    padding-left: 30px; 
+}
+
+.sidebar .active { 
+    background: linear-gradient(90deg, rgba(37,99,235,0.2) 0%, transparent 100%);
+    color: #ffffff; 
+    border-left: 4px solid #3b82f6; 
+    font-weight: 600;
+}
+
+/* Contenido Principal y Barra Superior */
+.main-content { 
+    margin-left: 250px;
+    width: calc(100% - 250px);
+    min-width: 0;
+    padding-bottom: 40px;
+}
+
+.topbar { 
+    background-color: rgba(255, 255, 255, 0.9); 
+    backdrop-filter: blur(10px); 
+    padding: 18px 35px; 
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03); 
+    position: sticky; 
+    top: 0; 
+    z-index: 99;
+}
+
+.topbar h5 { font-weight: 700; color: #1e293b; font-size: 1.2rem; }
+
+/* Tarjetas y Paneles */
+.card, .card-panel, .table-panel, .reporte-card { 
+    background-color: #ffffff; 
+    border-radius: 12px; 
+    border: none;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.04); 
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.card-stat:hover { 
+    transform: translateY(-8px); 
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08); 
+}
+
+/* Tablas */
+.table { margin-bottom: 0; }
+.table th { 
+    background-color: #f8fafc; 
+    color: #64748b; 
+    font-weight: 600; 
+    text-transform: uppercase; 
+    font-size: 0.8rem; 
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 15px;
+}
+.table td { padding: 15px; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
+.table-hover tbody tr:hover { background-color: #f8fafc; }
+
+/* Botones */
+.btn { border-radius: 8px; font-weight: 600; padding: 10px 20px; transition: all 0.2s; }
+.btn-primary { background-color: #2563eb; border: none; box-shadow: 0 4px 10px rgba(37,99,235,0.3); }
+.btn-primary:hover { background-color: #1d4ed8; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(37,99,235,0.4); }
+.btn-success { background-color: #047857; border-color: #047857; color: #fff; box-shadow: 0 4px 10px rgba(16,185,129,0.3); }
+.btn-success:hover { background-color: #065f46; border-color: #065f46; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(16,185,129,0.4); }
+
+/* Inputs de Formulario */
+.form-control, .form-select { 
+    border: 1px solid #cbd5e1; 
+    border-radius: 8px; 
+    padding: 10px 15px; 
+    font-size: 0.95rem; 
+    background-color: #f8fafc;
+}
+.form-control:focus, .form-select:focus { 
+    border-color: #3b82f6; 
+    box-shadow: 0 0 0 4px rgba(59,130,246,0.1); 
+    background-color: #ffffff;
+}
+.form-label { font-weight: 600; color: #475569; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.5px;}
+
+/* Corrección de contraste para "Consola Central" en la barra lateral */
+.sidebar .text-muted {
+    color: #94a3b8 !important; /* Gris claro luminoso */
+    letter-spacing: 0.5px;
+}
+
+/* Estilo para el Copyright fijado abajo */
+.sidebar-copy {
+    position: static;
+    margin: 24px 0 20px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.75rem;
+    color: #cbd5e1;
+    line-height: 1.5;
+}
+.sidebar-copy span {
+    color: #f59e0b; /* Toque ámbar para la marca */
+    font-weight: 600;
+}
+
+/* Contraste y navegación accesible en todas las pantallas. */
+.sidebar a.text-danger { color: #fca5a5 !important; }
+.sidebar a:focus-visible, .btn:focus-visible, a:focus-visible {
+    outline: 3px solid #f59e0b;
+    outline-offset: 3px;
+}
+.form-control::placeholder { color: #64748b; opacity: 1; }
+.table th { color: #475569; }
+.card-stat .text-warning { color: #92400e !important; }
+
+@media (max-width: 767.98px) {
+    .sidebar {
+        position: relative;
+        width: 100%;
+        height: auto;
+        padding: 18px 0 8px;
+    }
+    .sidebar a { padding: 10px 20px; }
+    .sidebar a:hover { padding-left: 25px; }
+    .sidebar-copy { margin: 15px 0 8px; }
+    .main-content { margin-left: 0; width: 100%; }
+    .topbar { position: relative; padding: 16px 20px; gap: 12px; flex-wrap: wrap; }
+    .topbar h5 { font-size: 1.05rem; }
+    .main-content > .p-4 { padding: 1rem !important; }
+    .table-panel { padding: 1rem !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

@@ -1,0 +1,10 @@
+**
+!api/
+!api/**
+!web/
+!web/**
+web/uploads/
+!index.php
+!router.php
+!health.php
+!Dockerfile

@@ -1,0 +1,53 @@
+/* css/estilos.css */
+body { 
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); 
+    font-family: 'Poppins', sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 24px 16px;
+    line-height: 1.5;
+}
+.login-container { width: 100%; max-width: 420px; }
+.login-box { 
+    background-color: rgba(255, 255, 255, 0.03); 
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px; 
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    padding: 50px 40px; 
+    width: 100%; 
+    max-width: 420px; 
+}
+.login-box .form-control { 
+    background-color: rgba(0, 0, 0, 0.2); 
+    border: 1px solid #94a3b8;
+    color: white; 
+    padding: 12px 14px;
+}
+.login-box .form-control::placeholder { color: #cbd5e1; opacity: 1; }
+.login-box .form-label { color: #f1f5f9; font-weight: 600; }
+.login-box .form-control:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+.login-box .btn-login {
+    background: #fbbf24;
+    color: #172033;
+    border: none; 
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 13px 20px;
+    cursor: pointer;
+}
+.login-box .btn-login:hover { background: #fcd34d; }
+.login-box .btn-login:focus-visible { outline: 3px solid white; outline-offset: 3px; }
+.login-box .btn-login:disabled { opacity: .7; cursor: wait; }
+.brand-title { color: #fbbf24; font-weight: 800; }
+.brand-subtitle { color: #f1f5f9; margin-bottom: 4px; }
+.brand-slogan { color: #cbd5e1; font-size: .9rem; }
+.alert-message { display: none; margin-top: 16px; padding: 12px 14px; border-radius: 8px; }
+@media (max-width: 480px) { .login-box { padding: 32px 24px; } }

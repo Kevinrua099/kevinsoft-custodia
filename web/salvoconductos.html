@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KevinSoft - Salvoconductos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/global.css" rel="stylesheet">
+    <link href="css/salvoconductos.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container-fluid p-0">
+        <div class="row g-0">
+            
+            <!-- Barra Lateral Fija -->
+            <div class="col-md-2 sidebar">
+                <div class="text-center mb-4">
+                    <h4 class="text-warning fw-bold">KEVINSOFT</h4>
+                    <small class="text-muted">Consola Central</small>
+                </div>
+                
+                <a href="dashboard.html">📊 Panel General</a>
+                <a href="armeria.html">🛡️ Control de Armería</a>
+                <a href="salvoconductos.html" class="active" aria-current="page">📄 Salvoconductos</a>
+                <a href="reportes.html">🚚 Reportes en Ruta</a>
+                <a href="patrullas.html">🚓 Control de Patrullas</a> <!-- NUEVO MÓDULO -->
+                <a href="nomina.html">👥 Nómina de Personal</a>
+                <a href="bandidas.html">🎯 Registro Especial</a>
+                
+                <!-- Le reducimos el margen top (mt-5 a mt-4) para que respire mejor -->
+                <a href="#" class="text-danger mt-4" id="btnCerrarSesion">🚪 Cerrar Sesión</a>
+
+                <!-- Copyright fijado al fondo -->
+                <div class="sidebar-copy">
+                    &copy; 2026 <span>KevinSoft</span><br>Todos los derechos reservados
+                </div>
+            </div>
+
+            <!-- Contenido Principal -->
+            <div class="col-md-10 main-content">
+                <div class="topbar d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 text-secondary fw-bold">Generador de Órdenes de Ruta</h5>
+                    <div class="text-primary fw-bold" id="nombreUsuarioTop">Cargando...</div>
+                </div>
+
+                <div class="p-4 row">
+                    <!-- Formulario de Creación -->
+                    <div class="col-md-8 mx-auto">
+                        <div class="card-panel p-4">
+                            <h5 class="mb-4 fw-bold">📝 Crear Nuevo Salvoconducto</h5>
+                            
+                            <form id="formSalvoconducto">
+                                <!-- Logística -->
+                                <div class="section-title">Logística del Viaje</div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Tipo de Viaje</label>
+                                        <select id="tipo_viaje" class="form-select">
+                                            <option value="TERRESTRE">ORDEN TERRESTRE</option>
+                                            <option value="FLUVIAL">ORDEN FLUVIAL</option>
+                                            <option value="CONTENEDORES">ORDEN CONTENEDORES</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Asunto</label>
+                                        <input type="text" id="asunto" class="form-control text-uppercase" placeholder="Ej: TRASLADO DE PLATAFORMAS CON CAMARÓN">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Fecha de Salida</label>
+                                        <input type="date" id="fecha_salida" class="form-control">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Fecha de Retorno</label>
+                                        <input type="date" id="fecha_retorno" class="form-control">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Origen (Desde)</label>
+                                        <input type="text" id="origen" class="form-control text-uppercase">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label text-muted small">Destino (Hasta)</label>
+                                        <input type="text" id="destino" class="form-control text-uppercase">
+                                    </div>
+                                </div>
+
+                                <!-- Asignación Vehicular -->
+                                <div class="section-title">Vehículo Asignado</div>
+                                <div class="mb-3">
+                                    <select id="vehiculo" class="form-select">
+                                        <option value="">Cargando vehículos...</option>
+                                    </select>
+                                </div>
+
+                                <!-- Personal y Armamento -->
+                                <div class="section-title">Personal y Armamento</div>
+                                
+                                <div class="row mb-3 p-3 border rounded bg-light">
+                                    <label class="fw-bold text-primary mb-2">LÍDER / CHOFER</label>
+                                    <div class="col-md-6">
+                                        <select id="chofer" class="form-select mb-2"></select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select id="arma_chofer" class="form-select"></select>
+                                    </div>
+                                </div>
+
+                                <!-- Custodio 1 Fijo -->
+                                <div class="row mb-3 p-3 border rounded bg-light">
+                                    <label class="fw-bold text-primary mb-2">CUSTODIO 1 (Opcional)</label>
+                                    <div class="col-md-6">
+                                        <select id="custodio1" class="form-select mb-2"></select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <select id="arma_custodio1" class="form-select"></select>
+                                    </div>
+                                </div>
+
+                                <!-- Aquí aparecerán los nuevos custodios -->
+                                <div id="contenedor_custodios_extra"></div>
+
+                                <!-- Botón para agregar más -->
+                                <button type="button" class="btn btn-outline-secondary w-100 mb-4 fw-bold" onclick="agregarCustodioAdicional()">
+                                    ➕ Añadir Custodio Adicional
+                                </button>
+
+                                <button type="submit" class="btn btn-success w-100 fw-bold py-2">Generar Salvoconducto y Asignar Armas</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/salvoconductos.js"></script>
+</body>
+</html>

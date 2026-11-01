@@ -1,0 +1,17 @@
+.vscode/
+.idea/
+.gradle/
+.kotlin/
+**/build/
+**/local.properties
+*.iml
+.env
+.env.*
+!.env.example
+uploads/
+web/uploads/
+*.pem
+*.key
+*.log
+*.sql.gz
+backup*.sql

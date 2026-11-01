@@ -1,0 +1,216 @@
+/* css/reportes.css */
+
+/* Tarjeta Principal de la Ruta */
+.ruta-card {
+    background-color: transparent; 
+    margin-bottom: 30px; 
+}
+
+.ruta-header {
+    padding: 15px 25px;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: linear-gradient(90deg, #ffffff 0%, #f8fafc 100%);
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.05);
+    border: 1px solid #e2e8f0;
+    border-left: 6px solid #f59e0b; /* Ámbar corporativo */
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.ruta-header:hover { transform: translateY(-3px); box-shadow: 0 12px 25px rgba(0,0,0,0.08); }
+
+.ruta-titulo { font-size: 1.2rem; color: #0f172a; font-weight: 900; letter-spacing: 0.5px;}
+
+/* Etiquetas de Placa y Disco */
+.badge-vehiculo {
+    background-color: #1e293b;
+    color: white;
+    padding: 6px 15px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    margin-left: 15px;
+    box-shadow: inset 0 2px 4px rgba(255,255,255,0.1);
+}
+.badge-disco { color: #f59e0b; margin-right: 5px;}
+
+/* Estilo de la Línea de Tiempo y Burbujas */
+.ruta-body {
+    padding: 20px 10px 10px 40px; /* Sangría para la línea de tiempo */
+    display: none; 
+}
+
+.timeline {
+    border-left: 3px dashed #cbd5e1;
+    position: relative;
+    padding-bottom: 20px;
+}
+
+/* LA BURBUJA DE CHAT */
+.evento-burbuja {
+    position: relative;
+    background: #ffffff;
+    padding: 20px;
+    border-radius: 0 20px 20px 20px; /* Forma de burbuja apuntando a la izquierda */
+    box-shadow: 0 10px 25px rgba(0,0,0,0.04);
+    border: 1px solid #e2e8f0;
+    margin-left: 30px;
+    margin-bottom: 30px;
+}
+
+/* La colita de la burbuja */
+.evento-burbuja::before {
+    content: ''; position: absolute; top: 0; left: -14px;
+    width: 0; height: 0;
+    border-right: 15px solid #ffffff;
+    border-bottom: 15px solid transparent;
+}
+
+/* El punto en la línea de tiempo */
+.timeline-dot {
+    position: absolute; left: -40px; top: -5px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background-color: #3b82f6;
+    border: 4px solid #f1f5f9;
+    box-shadow: 0 0 0 4px #e2e8f0;
+}
+
+.dot-pesca { background-color: #10b981; } 
+.dot-novedad { background-color: #ef4444; box-shadow: 0 0 0 4px #fecaca; animation: pulse 2s infinite;} 
+.dot-arribo { background-color: #f59e0b; } 
+
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+.evento-header { display: flex; justify-content: space-between; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;}
+.evento-tipo { font-weight: 800; color: #1e293b; font-size: 1.1rem; }
+.evento-hora { font-size: 0.85rem; color: #64748b; font-weight: 600; background: #f8fafc; padding: 4px 10px; border-radius: 20px;}
+
+.plataforma-box { background-color: #f8fafc; border-radius: 12px; padding: 20px; margin-top: 15px; border: 1px solid #e2e8f0; }
+.table-piscinas { width: 100%; font-size: 0.95rem; margin-top: 10px; }
+.table-piscinas th { background-color: #e2e8f0; padding: 10px; border-radius: 6px;}
+.table-piscinas td { padding: 10px; border-bottom: 1px dashed #cbd5e1; }
+.foto-guia { max-width: 150px; border-radius: 8px; cursor: pointer; border: 3px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: transform 0.3s; }
+.foto-guia:hover { transform: scale(1.1); z-index: 10;}
+
+/* LIGHTBOX (VISOR DE IMÁGENES/VIDEOS) */
+.lightbox-overlay {
+    display: none; /* Oculto por defecto */
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.85); /* Fondo oscuro */
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+.lightbox-content {
+    max-width: 90%;
+    max-height: 80vh;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    object-fit: contain; 
+    cursor: zoom-in;
+    transition: transform 0.15s ease-out;
+    user-select: none;
+}
+
+.lightbox-content:hover { transform: scale(1.03); }
+
+/* Botón de Cerrar (X) */
+.lightbox-close {
+    position: absolute;
+    top: 30px; right: 40px;
+    color: white;
+    font-size: 40px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.3s;
+}
+.lightbox-close:hover { color: #ef4444; }
+
+/* Botón de Descarga */
+.lightbox-download {
+    margin-top: 20px;
+    background-color: #2563eb;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 1rem;
+    transition: background-color 0.3s;
+}
+.lightbox-download:hover { background-color: #1d4ed8; color: white; }
+
+.notificaciones-container {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(390px, calc(100vw - 32px));
+}
+
+.notificacion-toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 15px 16px;
+    color: #f8fafc;
+    background: rgba(15, 23, 42, 0.96);
+    border-left: 5px solid #3b82f6;
+    border-radius: 14px;
+    box-shadow: 0 14px 35px rgba(15, 23, 42, 0.3);
+    opacity: 0;
+    transform: translateX(35px);
+    transition: opacity .3s ease, transform .3s ease;
+}
+
+.notificacion-toast.visible { opacity: 1; transform: translateX(0); }
+.notificacion-arribo { border-left-color: #f59e0b; }
+.notificacion-novedad { border-left-color: #ef4444; }
+.notificacion-exito { border-left-color: #22c55e; }
+.notificacion-error { border-left-color: #ef4444; }
+
+.notificacion-icono {
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    flex: 0 0 38px;
+    color: #fff;
+    background: #2563eb;
+    border-radius: 50%;
+}
+
+.notificacion-arribo .notificacion-icono { background: #f59e0b; }
+.notificacion-novedad .notificacion-icono,
+.notificacion-error .notificacion-icono { background: #ef4444; }
+.notificacion-exito .notificacion-icono { background: #22c55e; }
+.notificacion-texto { display: flex; flex: 1; flex-direction: column; gap: 3px; }
+.notificacion-texto strong { font-size: .96rem; }
+.notificacion-texto span { color: #cbd5e1; font-size: .84rem; }
+.notificacion-cerrar { border: 0; color: #94a3b8; background: transparent; font-size: 23px; line-height: 1; }
+.notificacion-cerrar:hover { color: #fff; }
+
+@media (max-width: 576px) {
+    .notificaciones-container { top: 12px; right: 16px; }
+    .ruta-header, .evento-header { flex-wrap: wrap; gap: 10px; }
+    .badge-vehiculo { display: inline-block; margin: 8px 0 0; }
+    .ruta-body { padding-left: 12px; }
+    .evento-burbuja { margin-left: 20px; padding: 14px; }
+    .plataforma-box { padding: 12px; overflow-x: auto; }
+    .table-piscinas { min-width: 320px; }
+    #feed-container .card-header { flex-wrap: wrap; gap: 10px; }
+    #feed-container .card-header > .ms-auto { margin-left: 0 !important; }
+    #feed-container .card-header .d-flex { flex-wrap: wrap; }
+    #feed-container .timeline { margin-left: 8px !important; padding-left: 16px !important; }
+    #feed-container .card-body { overflow-wrap: anywhere; }
+}

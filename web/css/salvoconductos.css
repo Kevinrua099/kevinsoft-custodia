@@ -1,0 +1,12 @@
+/* css/salvoconductos.css */
+.section-title { 
+    font-size: 0.85rem; 
+    font-weight: 700; 
+    color: #64748b; 
+    text-transform: uppercase; 
+    letter-spacing: 1px; 
+    border-bottom: 2px solid #e2e8f0; 
+    padding-bottom: 5px; 
+    margin-bottom: 15px; 
+    margin-top: 25px;
+}

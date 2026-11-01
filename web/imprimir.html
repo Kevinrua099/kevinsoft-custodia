@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Imprimir Salvoconducto - SEGULASA</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body { background-color: #525659; display: flex; justify-content: center; padding: 40px; font-family: 'Segoe UI', Arial, sans-serif; }
+        
+        /* Tu diseño exacto para la hoja A4 */
+        #orden { 
+            background: white; 
+            width: 210mm; 
+            min-height: 296mm; 
+            padding: 12mm 20mm; 
+            box-sizing: border-box; 
+            position: relative; 
+            font-size: 10.5pt; 
+            color: black; 
+            overflow: hidden; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .header-img { width: 100%; display: block; margin-bottom: 5mm; }
+        
+        .titulo-documento { text-align: center; font-size: 12pt; margin-bottom: 10px; line-height: 1.2; }
+        
+        .tabla-armas { width: 100%; border-collapse: collapse; margin-top: 2px; margin-bottom: 15px;}
+        .tabla-armas th, .tabla-armas td { border: 1px solid black; padding: 3px; text-align: left; font-size: 8.5pt; }
+        .tabla-armas th { background-color: #f2f2f2; }
+
+        .firma-contenedor { margin-top: 15px; text-align: center; width: 320px; margin-left: auto; margin-right: auto; }
+        .firma-linea { border-top: 1px solid black; margin: 50px 0 5px 0; }
+
+        /* Botón de descarga moderno */
+        .btn-descargar {
+            position: fixed; top: 20px; right: 20px; background-color: #27ae60; color: white;
+            padding: 15px 25px; border: none; border-radius: 5px; font-weight: bold; font-size: 16px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000;
+        }
+        .btn-descargar:hover { background-color: #219653; }
+        
+        @media print { 
+            .btn-descargar { display: none; } 
+            body { background-color: white; padding: 0;} 
+            #orden { box-shadow: none; margin: 0; padding: 0; width: 100%; height: auto;} 
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="descargarPDF()" class="btn-descargar">📥 GENERAR PDF OFICIAL</button>
+
+    <div id="orden">
+        <!-- Tu membrete original -->
+        <img src="Imagen1.png" class="header-img" alt="Membrete SEGULASA" onerror="this.style.display='none'">
+        
+        <div class="titulo-documento">
+            <p style="margin:0; font-weight:bold;">SALVOCONDUCTO.</p>
+            <br>
+            <p style="margin:0; font-weight:bold;">ORDEN DE TRABAJO &nbsp;-&nbsp; <span id="v_secuencia">Cargando...</span></p>
+        </div>
+        
+        <div id="v_cabecera" style="margin-bottom: 8px;">
+            <p style="margin:2px 0;">Fecha de Salida: <span id="v_fecha_salida"></span></p>
+            <p style="margin:2px 0;">Desde: <span id="v_desde_salida"></span></p>
+            <p style="margin:2px 0;">Hasta: <span id="v_hasta_salida"></span></p>
+            
+            <div id="bloque_retorno_vista">
+                <p style="margin:2px 0;">Fecha de Retorno: <span id="v_fecha_retorno"></span></p>
+                <p style="margin:2px 0;">Desde: <span id="v_desde_retorno"></span></p>
+                <p style="margin:2px 0;">Hasta: <span id="v_hasta_retorno"></span></p>
+            </div>
+            <p style="margin:2px 0;">Asunto: <span id="v_asunto_sup"></span></p>
+        </div>
+        
+        <p style="margin:5px 0;">Estimados señores de las Fuerzas Armadas, Policía Nacional, CTE -ATM.</p>
+        <p id="parrafo_certificacion" style="text-align:justify; margin:5px 0;"></p>
+        
+        <div id="v_vehiculo_info" style="margin: 8px 0;"></div>
+        
+        <!-- Tablas de Armas (Tu diseño de script.js) -->
+        <div id="v_tablas_personal"></div>
+        
+        <p id="parrafo_cierre" style="text-align:justify; margin-top:8px;"></p>
+        
+        <!-- Tu cuadro de firma con espacio amplio -->
+        <div class="firma-contenedor">
+            <p style="margin: 0; font-weight: bold;">Jefe de Seguridad</p>
+            <div class="firma-linea"></div>
+            <p style="margin: 0; font-weight: bold;">PETER BORIS ARREAGA RIERA</p>
+            <p style="margin: 0;">CI: 0921901120</p>
+            <p style="margin: 0;">TELF: 0959983336</p>
+        </div>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const numeroOrden = urlParams.get('orden');
+
+        if(numeroOrden) {
+            fetch('../api/imprimir_orden.php?orden=' + encodeURIComponent(numeroOrden))
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    const r = data.ruta;
+                    
+                    // 1. Datos Generales
+                    document.getElementById('v_secuencia').innerText = r.numero_registro;
+                    document.getElementById('v_fecha_salida').innerText = r.fecha_salida;
+                    document.getElementById('v_desde_salida').innerText = r.origen;
+                    document.getElementById('v_asunto_sup').innerText = r.asunto;
+
+                    // 2. Tu lógica condicional exacta para Párrafos y Vehículo
+                    const tipo = r.tipo_viaje; // TERRESTRE, FLUVIAL, CONTENEDORES
+                    const hs = r.origen;
+                    const ds = r.destino;
+                    const zona = r.zona || "Guayaquil"; // Si no hay zona, por defecto Guayaquil
+                    const asu = r.asunto;
+                    const cia = r.cia_vehiculo || "SEGULASA";
+                    const pla = r.placa || "N/A";
+
+                    const p = document.getElementById("parrafo_certificacion");
+                    const pCierre = document.getElementById("parrafo_cierre");
+                    const ret = document.getElementById("bloque_retorno_vista");
+                    const vInfo = document.getElementById("v_vehiculo_info");
+
+                    if (tipo === 'CONTENEDORES') {
+                        ret.style.display = "none";
+                        document.getElementById("v_hasta_salida").innerText = "Diferentes destinos logísticos dentro de la ciudad de Guayaquil y zonas operativas cercanas";
+                        p.innerHTML = `Por medio de la presente Yo PETER BORIS ARREAGA RIERA con CI: 0921901120 con el cargo de Jefe de Talento Humano (SEGULASA) certifico que se realiza la custodia ( ${asu} ) Desde: ${hs} Zona: ${zona} Hasta: diferentes destinos logísticos dentro de la ciudad de Guayaquil y zonas operativas cercanas , el personal de seguridad para este traslado es:`;
+                        vInfo.innerHTML = `<p style="margin:0">VEHICULO</p><p style="margin:0">CIA: ${cia} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Placas: ${pla}</p>`;
+                        pCierre.innerText = "Los cuales se movilizan y transportan las siguientes armas con sus respectivos permisos y la munición indicada, como parte de la custodia correspondiente al servicio de seguridad prestada a la empresa SONGA (SOCIEDAD NACIONAL DE GALAPAGOS), para garantizar el traslado seguro del contenedor hacia diferentes destinos logísticos dentro de la ciudad de Guayaquil y zonas operativas cercanas, tales como Posorja, Durán, Vía Daule, entre otros puntos autorizados.";
+                    } else if (tipo === 'FLUVIAL') {
+                        ret.style.display = "block";
+                        document.getElementById("v_fecha_retorno").innerText = r.fecha_retorno;
+                        document.getElementById("v_desde_retorno").innerText = ds;
+                        document.getElementById("v_hasta_retorno").innerText = hs;
+                        document.getElementById("v_hasta_salida").innerText = ds;
+                        p.innerHTML = `Por medio de la presente Yo PETER BORIS ARREAGA RIERA con CI: 0921901120 con el cargo de Jefe de Talento Humano (SEGULASA) certifico que se realiza la custodia ( ${asu} ) Desde: ${hs} Zona: ${zona} Hasta: ${ds} ,el personal de seguridad para este traslado es:`;
+                        vInfo.innerHTML = `<p style="margin:0">EMBARCACION.</p><p style="margin:0">Nombre / Matricula: ${pla}</p><p style="margin:0">CUSTODIA.</p>`;
+                        pCierre.innerText = "Los cuales se movilizan y transportan las siguientes armas con sus respectivos permisos y la munición indicada, como parte de la custodia correspondiente al servicio de seguridad prestada a la empresa SONGA (SOCIEDAD NACIONAL DE GALAPAGOS), para garantizar el traslado fluvial";
+                    } else {
+                        ret.style.display = "block";
+                        document.getElementById("v_fecha_retorno").innerText = r.fecha_retorno;
+                        document.getElementById("v_desde_retorno").innerText = ds;
+                        document.getElementById("v_hasta_retorno").innerText = hs;
+                        document.getElementById("v_hasta_salida").innerText = ds;
+                        p.innerHTML = `Por medio de la presente Yo PETER BORIS ARREAGA RIERA con CI: 0921901120 con el cargo de Jefe de Talento Humano (SEGULASA) certifico que se realiza la custodia ( ${asu} ) Desde: ${hs} Zona: ${zona} Hasta: ${ds} ,el personal de seguridad para este traslado es:`;
+                        vInfo.innerHTML = `<p style="margin:0">VEHICULO</p><p style="margin:0">CIA: ${cia} &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Placas: ${pla}</p>`;
+                        pCierre.innerText = "Los cuales se movilizan y transportan las siguientes armas con sus respectivos permisos y la munición indicada, como parte de la custodia correspondiente al servicio de seguridad prestada a la empresa SONGA (SOCIEDAD NACIONAL DE GALAPAGOS), para garantizar el traslado.";
+                    }
+
+                    // 3. Tu lógica exacta para inyectar las tablas de armamento
+                    let h = "";
+                    data.personal.forEach((p, index) => {
+                        const tituloRol = p.rol_en_ruta.includes('CHOFER') ? 'Chofer' : 'Custodia';
+                        h += `<div style="margin-top:8px">
+                        <p style="margin:0">${tituloRol}: ${p.nombres_completos} &nbsp;&nbsp; CI: ${p.cedula} ( ${p.cia_empresa} )</p>
+                        <table class="tabla-armas">
+                            <tr><th>ARMA</th><th>MARCA</th><th>CALIBRE</th><th>SERIE</th><th>MUNICION</th></tr>
+                            <tr>
+                                <td>${p.tipo_arma || '---'}</td>
+                                <td>${p.marca || '---'}</td>
+                                <td>${p.calibre || '---'}</td>
+                                <td>${p.serie || '---'}</td>
+                                <td>10</td>
+                            </tr>
+                        </table></div>`;
+                    });
+                    document.getElementById("v_tablas_personal").innerHTML = h;
+
+                } else {
+                    alert("Error: " + data.mensaje);
+                }
+            });
+        }
+
+        // 4. Tu configuración exacta para html2pdf
+        function descargarPDF() {
+            const opt = {
+                margin: 0,
+                filename: `Orden_${numeroOrden}.pdf`,
+                image: { type: 'jpeg', quality: 1 },
+                html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(document.getElementById("orden")).save();
+        }
+    </script>
+</body>
+</html>
