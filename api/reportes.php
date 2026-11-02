@@ -33,9 +33,10 @@ try {
             $q_piscinas->execute([$guia['id_guia']]);
             $guia['piscinas'] = $q_piscinas->fetchAll(PDO::FETCH_ASSOC);
         }
+        unset($guia);
         $rep['guias'] = $guias;
 
-        $q_evidencias = $conexion->prepare("SELECT * FROM evidencias_reporte WHERE id_reporte = ?");
+        $q_evidencias = $conexion->prepare("SELECT e.*, (a.id_evidencia IS NOT NULL) AS guardada FROM evidencias_reporte e LEFT JOIN evidencias_reporte_archivo a ON a.id_evidencia = e.id_evidencia WHERE e.id_reporte = ?");
         $q_evidencias->execute([$rep['id_reporte']]);
         $rep['evidencias'] = $q_evidencias->fetchAll(PDO::FETCH_ASSOC);
 

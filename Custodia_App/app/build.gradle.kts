@@ -14,9 +14,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Cambiar con -PcustodiaApiBaseUrl=http://IP_DEL_SERVIDOR/custodia/api/
+        // Se puede cambiar con -PcustodiaApiBaseUrl para usar otro servidor.
         val apiBaseUrl = providers.gradleProperty("custodiaApiBaseUrl")
-            .orElse("http://10.0.2.2/custodia/api/").get()
+            .orElse("https://kevinsoft-custodia.onrender.com/api/").get()
         require((apiBaseUrl.startsWith("http://") || apiBaseUrl.startsWith("https://")) && apiBaseUrl.endsWith("/")) {
             "custodiaApiBaseUrl debe ser una URL HTTP(S) terminada en /."
         }

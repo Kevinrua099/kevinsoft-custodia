@@ -1,10 +1,6 @@
 package com.example.custodia_app.screens
 
-import android.graphics.Bitmap
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -14,18 +10,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.custodia_app.network.RetrofitClient
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.ByteArrayOutputStream
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,11 +32,8 @@ fun InspeccionScreen(navController: NavController) {
     var kilometraje by rememberSaveable { mutableStateOf("") }
     var observaciones by rememberSaveable { mutableStateOf("") }
 
-    val listaFotos = remember { mutableStateListOf<Bitmap>() }
-
-    val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
-        bitmap?.let { listaFotos.add(it) }
-    }
+    var listaFotos by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val tomarFoto = rememberCameraCapture { uri -> listaFotos = listaFotos + uri }
 
     var isLoading by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -61,7 +55,7 @@ fun InspeccionScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Button(onClick = { cameraLauncher.launch(null) }, enabled = !isLoading && listaFotos.size < 8, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
+                Button(onClick = tomarFoto, enabled = !isLoading && listaFotos.size < 8, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) {
                     Text("📸 AÑADIR FOTO (${listaFotos.size}/8)")
                 }
 
@@ -72,12 +66,12 @@ fun InspeccionScreen(navController: NavController) {
                 item {
                     Text("Fotos capturadas: ${listaFotos.size}", fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(listaFotos) { index, bmp ->
+                        itemsIndexed(listaFotos) { index, uri ->
                             Column {
                                 Card(modifier = Modifier.size(100.dp)) {
-                                    Image(bitmap = bmp.asImageBitmap(), contentDescription = "Foto ${index + 1} de la patrulla", modifier = Modifier.fillMaxSize())
+                                    AsyncImage(model = android.net.Uri.parse(uri), contentDescription = "Foto ${index + 1} de la patrulla", modifier = Modifier.fillMaxSize())
                                 }
-                                TextButton(onClick = { listaFotos.removeAt(index) }, enabled = !isLoading) { Text("Quitar") }
+                                TextButton(onClick = { deleteCameraPhoto(context, uri); listaFotos = listaFotos.filterIndexed { i, _ -> i != index } }, enabled = !isLoading) { Text("Quitar") }
                             }
                         }
                     }
@@ -99,16 +93,13 @@ fun InspeccionScreen(navController: NavController) {
                                 val kmBody = kilometraje.toRequestBody("text/plain".toMediaTypeOrNull())
                                 val obsBody = observaciones.toRequestBody("text/plain".toMediaTypeOrNull())
 
-                                val partesFotos = mutableListOf<okhttp3.MultipartBody.Part>()
-                                listaFotos.forEachIndexed { index, bmp ->
-                                    val stream = ByteArrayOutputStream()
-                                    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, stream)
-                                    val reqFile = stream.toByteArray().toRequestBody("image/jpeg".toMediaTypeOrNull())
-                                    partesFotos.add(okhttp3.MultipartBody.Part.createFormData("foto_$index", "insp_$index.jpg", reqFile))
+                                val partesFotos = withContext(Dispatchers.IO) {
+                                    photoParts(context, listaFotos.mapIndexed { index, uri -> "foto_$index" to uri })
                                 }
 
                                 val response = RetrofitClient.instance.enviarInspeccion(userBody, placaBody, discoBody, kmBody, obsBody, partesFotos)
                                 if(response.status == "success") {
+                                    listaFotos.forEach { deleteCameraPhoto(context, it) }
                                     Toast.makeText(context, "✅ Vehículo Recibido", Toast.LENGTH_LONG).show()
                                     navController.popBackStack()
                                 } else { Toast.makeText(context, "Error: ${response.mensaje}", Toast.LENGTH_LONG).show() }

@@ -91,6 +91,13 @@ CREATE TABLE evidencias_reporte (
   FOREIGN KEY (id_reporte) REFERENCES reportes_pesca (id_reporte) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE evidencias_reporte_archivo (
+  id_evidencia int NOT NULL PRIMARY KEY,
+  tipo_mime varchar(30) NOT NULL,
+  contenido LONGBLOB NOT NULL,
+  FOREIGN KEY (id_evidencia) REFERENCES evidencias_reporte (id_evidencia) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE inspeccion_vehiculos (
   id_inspeccion int NOT NULL AUTO_INCREMENT PRIMARY KEY,
   id_usuario int DEFAULT NULL,

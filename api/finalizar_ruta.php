@@ -17,6 +17,11 @@ try {
         $q = $conexion->prepare("SELECT id_ruta, id_vehiculo FROM salvoconductos_rutas WHERE numero_registro = ?");
         $q->execute([$num]);
         $ruta = $q->fetch(PDO::FETCH_ASSOC);
+        if (!$ruta) {
+            $conexion->rollBack();
+            echo json_encode(['status' => 'error', 'mensaje' => 'Ruta no encontrada.']);
+            exit;
+        }
 
         // 2. Finalizar Ruta
         $conexion->prepare("UPDATE salvoconductos_rutas SET estado_ruta = 'Finalizada' WHERE id_ruta = ?")->execute([$ruta['id_ruta']]);

@@ -13,7 +13,15 @@ document.addEventListener("DOMContentLoaded", () => {
     setInterval(() => cargarReportes(false), 5000);
 
     document.addEventListener('pointerdown', habilitarSonido, { once: true });
+    document.addEventListener('click', event => {
+        const boton = event.target.closest('.btn-finalizar-ruta');
+        if (boton) darAltaDesdeReportes(boton.dataset.ruta, event);
+    });
 });
+
+function escaparHtml(valor) {
+    return String(valor ?? '').replace(/[&<>"']/g, caracter => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[caracter]));
+}
 
 let idsReportesConocidos = new Set();
 let primeraCargaReportes = true;
@@ -27,7 +35,7 @@ function cargarReportes(esCargaInicial) {
                 notificarReportesNuevos(data.data, esCargaInicial);
                 renderizarFeed(data.data);
             } else {
-                document.getElementById('feed-container').innerHTML = `<div class="alert alert-danger mt-3">Error del servidor: ${data.mensaje}</div>`;
+                document.getElementById('feed-container').innerHTML = `<div class="alert alert-danger mt-3">Error del servidor: ${escaparHtml(data.mensaje)}</div>`;
             }
         })
         .catch(error => {
@@ -71,7 +79,7 @@ function mostrarToast(titulo, detalle, tipo) {
     toast.className = `notificacion-toast notificacion-${tipo}`;
     toast.innerHTML = `
         <div class="notificacion-icono"><i class="fas ${tipo === 'arribo' ? 'fa-flag-checkered' : tipo === 'novedad' ? 'fa-triangle-exclamation' : 'fa-bell'}"></i></div>
-        <div class="notificacion-texto"><strong>${titulo}</strong><span>${detalle}</span></div>
+        <div class="notificacion-texto"><strong>${escaparHtml(titulo)}</strong><span>${escaparHtml(detalle)}</span></div>
         <button type="button" class="notificacion-cerrar" aria-label="Cerrar">&times;</button>
     `;
     toast.querySelector('.notificacion-cerrar').addEventListener('click', () => toast.remove());
@@ -148,18 +156,18 @@ function renderizarFeed(reportes) {
             botonAltaHtml = `
                 <div class="ms-auto d-flex align-items-center gap-3">
                     <span class="badge bg-warning text-dark fs-6 fw-bold border border-warning shadow-sm"><i class="fas fa-hourglass-half"></i> En Espera de Confirmación</span>
-                    <button onclick="darAltaDesdeReportes('${numRuta}', event)" class="btn btn-sm btn-success fw-bold shadow-sm"><i class="fas fa-check-double"></i> DAR DE ALTA</button>
+                    <button data-ruta="${escaparHtml(numRuta)}" class="btn btn-sm btn-success fw-bold shadow-sm btn-finalizar-ruta"><i class="fas fa-check-double"></i> DAR DE ALTA</button>
                 </div>`;
         } else {
-            botonAltaHtml = `<button onclick="darAltaDesdeReportes('${numRuta}', event)" class="btn btn-sm btn-success fw-bold ms-auto shadow-sm"><i class="fas fa-check"></i> DAR DE ALTA</button>`;
+            botonAltaHtml = `<button data-ruta="${escaparHtml(numRuta)}" class="btn btn-sm btn-success fw-bold ms-auto shadow-sm btn-finalizar-ruta"><i class="fas fa-check"></i> DAR DE ALTA</button>`;
         }
 
         html += `
         <div class="card mb-4 shadow-sm border-0 border-start border-4 border-warning">
             <div class="card-header bg-white d-flex align-items-center py-3" id="head_${idUnico}" data-bs-toggle="collapse" data-bs-target="#${idUnico}" style="cursor:pointer;">
                 <i class="fas fa-clipboard-list text-secondary fs-4 me-3"></i>
-                <h5 class="mb-0 fw-bold me-3 text-dark">${ruta.numero_registro}</h5>
-                <span class="badge bg-dark text-white px-3 py-2 rounded-pill me-2">Disco: ${ruta.disco} | Placa: ${ruta.placa}</span>
+                <h5 class="mb-0 fw-bold me-3 text-dark">${escaparHtml(ruta.numero_registro)}</h5>
+                <span class="badge bg-dark text-white px-3 py-2 rounded-pill me-2">Disco: ${escaparHtml(ruta.disco)} | Placa: ${escaparHtml(ruta.placa)}</span>
                 
                 ${botonAltaHtml}
                 
@@ -184,15 +192,15 @@ function renderizarFeed(reportes) {
                 </div>
                 
                 <div class="d-flex justify-content-between mb-2">
-                    <h6 class="fw-bold text-uppercase ${color} mb-0 fs-5"><i class="fas ${icono} me-2"></i> ${evento.tipo_reporte}</h6>
-                    <small class="text-muted fw-bold"><i class="far fa-clock"></i> ${evento.fecha_hora_reporte}</small>
+                    <h6 class="fw-bold text-uppercase ${color} mb-0 fs-5"><i class="fas ${icono} me-2"></i> ${escaparHtml(evento.tipo_reporte)}</h6>
+                    <small class="text-muted fw-bold"><i class="far fa-clock"></i> ${escaparHtml(evento.fecha_hora_reporte)}</small>
                 </div>
                 
-                <p class="mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> <strong>Ubicación:</strong> <span class="text-dark">${evento.origen_camaronera || 'S/N'}</span></p>
+                <p class="mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> <strong>Ubicación:</strong> <span class="text-dark">${escaparHtml(evento.origen_camaronera || 'S/N')}</span></p>
                 
                 <div class="bg-white p-3 rounded shadow-sm border mb-3">
                     <p class="mb-1 text-muted"><i class="far fa-comment-dots"></i> <strong>Novedades / Observaciones:</strong></p>
-                    <p class="mb-0 text-dark">${evento.observaciones ? evento.observaciones : 'Ninguna novedad reportada.'}</p>
+                    <p class="mb-0 text-dark">${escaparHtml(evento.observaciones || 'Ninguna novedad reportada.')}</p>
                 </div>
             `;
 
@@ -200,7 +208,8 @@ function renderizarFeed(reportes) {
                 evento.guias.forEach(guia => {
                     html += `
                     <div class="mb-3 px-2">
-                        <p class="fw-bold text-primary mb-2"><i class="fas fa-truck-loading me-1"></i> ${guia.identificador_plataforma || 'S/N'}</p>
+                        <p class="fw-bold text-primary mb-2"><i class="fas fa-truck-loading me-1"></i> ${escaparHtml(guia.identificador_plataforma || 'S/N')}</p>
+                        ${/^\.\.\/api\/reportes_app\.php\?evidencia=\d+$/.test(guia.ruta_foto_guia || '') ? `<img src="${guia.ruta_foto_guia}" alt="Foto de la guía" width="150" height="150" class="rounded object-fit-cover mb-2" onclick="abrirVisor(this.src, event)">` : ''}
                         <table class="table table-sm table-bordered bg-white text-center shadow-sm">
                             <thead class="table-light">
                                 <tr><th>N° Piscina</th><th>Libraje</th></tr>
@@ -209,7 +218,7 @@ function renderizarFeed(reportes) {
                     `;
                     if (guia.piscinas && guia.piscinas.length > 0) {
                         guia.piscinas.forEach(pisc => {
-                            html += `<tr><td class="text-dark">${pisc.numero_piscina || '-'}</td><td class="text-dark">${pisc.libraje || '-'}</td></tr>`;
+                            html += `<tr><td class="text-dark">${escaparHtml(pisc.numero_piscina || '-')}</td><td class="text-dark">${escaparHtml(pisc.libraje || '-')}</td></tr>`;
                         });
                     } else {
                         html += `<tr><td colspan="2" class="text-muted fst-italic">Sin piscinas registradas</td></tr>`;
@@ -221,7 +230,10 @@ function renderizarFeed(reportes) {
             if (evento.evidencias && evento.evidencias.length > 0) {
                 html += `<div class="mt-4 p-3 bg-white rounded shadow-sm border"><p class="fw-bold mb-3 text-dark"><i class="fas fa-camera text-primary me-2"></i>Evidencias Adjuntas:</p><div class="d-flex gap-3 flex-wrap">`;
                 evento.evidencias.forEach(ev => {
-                    const [rutaArchivoFinal, rutaAlterna] = obtenerRutasEvidencia(ev.ruta_archivo);
+                    const guardada = Number(ev.guardada) === 1;
+                    const [rutaArchivoFinal, rutaAlterna] = guardada
+                        ? [`../api/reportes_app.php?evidencia=${Number(ev.id_evidencia)}`, '']
+                        : obtenerRutasEvidencia(ev.ruta_archivo);
                     
                     if (ev.tipo_archivo === 'video') {
                         html += `
@@ -229,7 +241,7 @@ function renderizarFeed(reportes) {
                             <source src="${rutaArchivoFinal}" type="video/mp4">
                         </video>`;
                     } else {
-                        html += `<img src="${rutaArchivoFinal}" class="rounded shadow-sm border border-2 border-light object-fit-cover hover-zoom" width="150" height="150" alt="Evidencia del reporte" style="cursor:pointer;" onerror="cambiarRutaEvidencia(this, '${rutaAlterna}')" onclick="abrirVisor(this.src, event)">`;
+                        html += `<img src="${rutaArchivoFinal}" class="rounded shadow-sm border border-2 border-light object-fit-cover hover-zoom" width="150" height="150" alt="Evidencia del reporte" style="cursor:pointer;" ${guardada ? '' : `onerror="cambiarRutaEvidencia(this, '${rutaAlterna}')"`} onclick="abrirVisor(this.src, event)">`;
                     }
                 });
                 html += `</div></div>`;
@@ -259,7 +271,7 @@ function obtenerRutasEvidencia(rutaArchivo) {
     const archivoCodificado = rutaRelativa
         .split('/')
         .filter(Boolean)
-        .map(segmento => encodeURIComponent(segmento))
+        .map(segmento => encodeURIComponent(segmento).replace(/'/g, '%27'))
         .join('/');
     const rutaPrincipal = `../uploads/${archivoCodificado.replace(/^uploads\//, '')}`;
     const rutaAlterna = `uploads/${archivoCodificado.replace(/^uploads\//, '')}`;

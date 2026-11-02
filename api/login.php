@@ -48,6 +48,7 @@ try {
                 "status" => "success", 
                 "mensaje" => "Bienvenido " . $usuario['nombres_completos'],
                 "usuario" => [
+                    "id" => (int)$usuario['id_usuario'],
                     "nombres" => $usuario['nombres_completos'],
                     "rol" => $usuario['rol']
                 ]

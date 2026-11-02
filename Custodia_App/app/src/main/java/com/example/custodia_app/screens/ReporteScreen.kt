@@ -1,265 +1,241 @@
 package com.example.custodia_app.screens
 
-import android.util.Log
+import android.net.Uri
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.custodia_app.network.RetrofitClient
+import com.example.custodia_app.network.Ruta
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.RequestBody.Companion.toRequestBody
 import java.util.UUID
 
-enum class EstadoOperacion {
-    REGISTRO_INICIAL,
-    VIAJE_EN_CURSO,
-    ESPERA_CONFIRMACION
-}
+private data class PiscinaData(val numero: String = "", val libras: String = "")
+private data class PlataformaData(
+    val id: String = UUID.randomUUID().toString(),
+    val nombre: String = "",
+    val piscinas: List<PiscinaData> = listOf(PiscinaData()),
+    val foto: String? = null
+)
 
-// Estructuras de datos para guardar lo que escribes dinámicamente
-data class PiscinaData(val id: String = UUID.randomUUID().toString(), var numero: String = "", var libras: String = "")
-data class PlataformaData(val id: String = UUID.randomUUID().toString(), var nombre: String = "", var piscinas: List<PiscinaData> = listOf(PiscinaData()))
+private val plataformasSaver = Saver<List<PlataformaData>, String>(
+    save = { Gson().toJson(it) },
+    restore = { Gson().fromJson(it, object : TypeToken<List<PlataformaData>>() {}.type) }
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReporteScreen(navController: NavController) {
-    var estadoPantalla by remember { mutableStateOf(EstadoOperacion.REGISTRO_INICIAL) }
     val context = LocalContext.current
+    val usuarioId = context.getSharedPreferences("CustodiaPrefs", 0).getInt("usuarioId", 0)
+    val scope = rememberCoroutineScope()
+    var rutas by remember { mutableStateOf<List<Ruta>>(emptyList()) }
+    var seleccion by rememberSaveable { mutableStateOf<String?>(null) }
+    var tipo by rememberSaveable { mutableStateOf<String?>(null) }
+    var origen by rememberSaveable { mutableStateOf("") }
+    var observaciones by rememberSaveable { mutableStateOf("") }
+    var plataformas by rememberSaveable(stateSaver = plataformasSaver) { mutableStateOf(listOf(PlataformaData())) }
+    var fotoGeneral by rememberSaveable { mutableStateOf<String?>(null) }
+    var fotoDestino by rememberSaveable { mutableStateOf<String?>(null) }
+    var cargando by remember { mutableStateOf(false) }
+    var enviando by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
-    // Variables de estado para los campos de texto
-    var origenTexto by remember { mutableStateOf("") }
-
-    // Lista reactiva para generar plataformas y piscinas infinitas
-    var listaPlataformas by remember { mutableStateOf(listOf(PlataformaData(nombre = "Plataforma 1"))) }
-
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Operación Táctica", color = Color.White, fontWeight = FontWeight.Bold) },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF3B5998))
-            )
+    val tomarFoto = rememberCameraCapture { uri ->
+        if (fotoDestino == "general") {
+            fotoGeneral?.let { deleteCameraPhoto(context, it) }
+            fotoGeneral = uri
+        } else {
+            plataformas = plataformas.map { plataforma ->
+                if (plataforma.id == fotoDestino) {
+                    plataforma.foto?.let { deleteCameraPhoto(context, it) }
+                    plataforma.copy(foto = uri)
+                } else plataforma
+            }
         }
-    ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Top
-        ) {
+        fotoDestino = null
+    }
 
-            when (estadoPantalla) {
+    fun cargarRutas() {
+        if (usuarioId <= 0 || cargando) return
+        cargando = true
+        scope.launch {
+            try {
+                val respuesta = RetrofitClient.instance.listarRutas(usuarioId)
+                if (respuesta.status == "success" && respuesta.data != null) {
+                    rutas = respuesta.data
+                    error = null
+                } else error = respuesta.mensaje ?: "No se pudieron consultar las rutas."
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                error = "No se pudieron actualizar las rutas. Comprueba la conexión y vuelve a intentar."
+            } finally { cargando = false }
+        }
+    }
 
-                EstadoOperacion.REGISTRO_INICIAL -> {
-                    // --- ETAPA 1: REGISTRO INICIAL DE CARGA ---
-                    Text(
-                        text = "Paso 1: Registro Inicial de Carga",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = Color(0xFF3B5998),
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.Start
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+    fun limpiarFormulario() {
+        plataformas.mapNotNull { it.foto }.forEach { deleteCameraPhoto(context, it) }
+        fotoGeneral?.let { deleteCameraPhoto(context, it) }
+        plataformas = listOf(PlataformaData())
+        fotoGeneral = null
+        observaciones = ""
+        origen = ""
+        tipo = null
+    }
 
-                    // CAMPO: ORIGEN
-                    OutlinedTextField(
-                        value = origenTexto,
-                        onValueChange = { origenTexto = it },
-                        label = { Text("Origen (Ej: Muelle Pesalamar)") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+    BackHandler(enabled = enviando || tipo != null || seleccion != null) {
+        if (!enviando) {
+            if (tipo != null) limpiarFormulario() else seleccion = null
+        }
+    }
 
-                    // BUCLE QUE DIBUJA LAS PLATAFORMAS DINÁMICAMENTE
-                    listaPlataformas.forEachIndexed { pIndex, plataforma ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8EAF6)),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+    LaunchedEffect(usuarioId) { cargarRutas() }
+    LaunchedEffect(seleccion) {
+        while (seleccion != null) {
+            delay(15000)
+            cargarRutas()
+        }
+    }
+    val ruta = rutas.find { it.numero == seleccion }
+    val activa = ruta?.estado in listOf("Activa", "En Tránsito")
 
-                                // CAMPO: NOMBRE PLATAFORMA
-                                OutlinedTextField(
-                                    value = plataforma.nombre,
-                                    onValueChange = { nuevoTexto ->
-                                        val listaActualizada = listaPlataformas.toMutableList()
-                                        listaActualizada[pIndex] = plataforma.copy(nombre = nuevoTexto)
-                                        listaPlataformas = listaActualizada
-                                    },
-                                    label = { Text("Plataforma/Guía") },
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                Button(
-                                    onClick = { Toast.makeText(context, "Abriendo cámara...", Toast.LENGTH_SHORT).show() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6595)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { Text("📸 TOMAR FOTO GUÍA", color = Color.White) }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-
-                                // BUCLE QUE DIBUJA LAS PISCINAS DE ESTA PLATAFORMA
-                                plataforma.piscinas.forEachIndexed { pscIndex, piscina ->
-                                    Row(modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-
-                                        OutlinedTextField(
-                                            value = piscina.numero,
-                                            onValueChange = { nuevoNum ->
-                                                val piscinasActualizadas = plataforma.piscinas.toMutableList()
-                                                piscinasActualizadas[pscIndex] = piscina.copy(numero = nuevoNum)
-                                                val listaActualizada = listaPlataformas.toMutableList()
-                                                listaActualizada[pIndex] = plataforma.copy(piscinas = piscinasActualizadas)
-                                                listaPlataformas = listaActualizada
-                                            },
-                                            label = { Text("Piscina") },
-                                            modifier = Modifier.weight(1f)
-                                        )
-
-                                        OutlinedTextField(
-                                            value = piscina.libras,
-                                            onValueChange = { nuevasLibras ->
-                                                val piscinasActualizadas = plataforma.piscinas.toMutableList()
-                                                piscinasActualizadas[pscIndex] = piscina.copy(libras = nuevasLibras)
-                                                val listaActualizada = listaPlataformas.toMutableList()
-                                                listaActualizada[pIndex] = plataforma.copy(piscinas = piscinasActualizadas)
-                                                listaPlataformas = listaActualizada
-                                            },
-                                            label = { Text("Libras") },
-                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                            modifier = Modifier.weight(1f)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-
-                                // BOTÓN: AÑADIR PISCINA DENTRO DE ESTA PLATAFORMA
-                                Button(
-                                    onClick = {
-                                        val piscinasActualizadas = plataforma.piscinas.toMutableList()
-                                        piscinasActualizadas.add(PiscinaData())
-                                        val listaActualizada = listaPlataformas.toMutableList()
-                                        listaActualizada[pIndex] = plataforma.copy(piscinas = piscinasActualizadas)
-                                        listaPlataformas = listaActualizada
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD1D5DF)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) { Text("➕ AÑADIR PISCINA", color = Color.DarkGray, fontWeight = FontWeight.Bold) }
-                            }
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text("Custodia en ruta") },
+            navigationIcon = { TextButton(onClick = {
+                when {
+                    tipo != null -> limpiarFormulario()
+                    seleccion != null -> seleccion = null
+                    else -> navController.popBackStack()
+                }
+            }, enabled = !enviando) { Text("Volver") } }
+        )
+    }) { padding ->
+        Column(Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (usuarioId <= 0) {
+                Text("El servidor aún no entrega el identificador del usuario. Actualiza la API e inicia sesión de nuevo.", color = MaterialTheme.colorScheme.error)
+            } else if (seleccion == null) {
+                Text("Mis rutas asignadas", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Las rutas se asignan desde Salvoconductos en la página web.")
+                OutlinedButton(onClick = { cargarRutas() }, enabled = !cargando) { Text(if (cargando) "Actualizando..." else "Actualizar rutas") }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (!cargando && error == null && rutas.isEmpty()) Text("No tienes rutas asignadas todavía.")
+                rutas.forEach { item ->
+                    OutlinedCard(onClick = { seleccion = item.numero }, modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(16.dp)) {
+                            Text(item.numero, fontWeight = FontWeight.Bold)
+                            Text("${item.origen ?: "Sin origen"} → ${item.destino ?: "Sin destino"}")
+                            Text("Disco: ${item.disco ?: "S/N"} · Placa: ${item.placa ?: "S/N"}")
+                            Text("Estado: ${item.estado}")
                         }
                     }
-
-                    // BOTÓN: AGREGAR OTRA PLATAFORMA NUEVA
-                    Button(
-                        onClick = {
-                            val listaActualizada = listaPlataformas.toMutableList()
-                            listaActualizada.add(PlataformaData(nombre = "Plataforma ${listaActualizada.size + 1}"))
-                            listaPlataformas = listaActualizada
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7D5A7A)),
-                        modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) { Text("➕ AGREGAR OTRA PLATAFORMA", color = Color.White) }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // BOTÓN: INICIAR RUTA
-                    Button(
-                        onClick = {
-                            // Opcional: Aquí enviarías 'origenTexto' y 'listaPlataformas' a tu API
-                            estadoPantalla = EstadoOperacion.VIAJE_EN_CURSO
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4A6595)),
-                        modifier = Modifier.fillMaxWidth().height(50.dp)
-                    ) { Text("INICIAR RUTA Y ENVIAR DATOS", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
-
-                EstadoOperacion.VIAJE_EN_CURSO -> {
-                    // --- ETAPA 2: VIAJE EN CURSO ---
-                    Spacer(modifier = Modifier.height(40.dp))
-                    Text("🚚 VIAJE EN CURSO", fontWeight = FontWeight.Bold, fontSize = 24.sp, color = Color(0xFF2C3E50))
-                    Spacer(modifier = Modifier.height(30.dp))
-
-                    Button(
-                        onClick = { Toast.makeText(context, "Abrir formulario Novedad...", Toast.LENGTH_SHORT).show() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFC0392B)),
-                        modifier = Modifier.fillMaxWidth(0.85f).height(60.dp), shape = MaterialTheme.shapes.medium
-                    ) { Text("🚨 REPORTAR NOVEDAD", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = { Toast.makeText(context, "Abrir formulario Pesca...", Toast.LENGTH_SHORT).show() },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2980B9)),
-                        modifier = Modifier.fillMaxWidth(0.85f).height(60.dp), shape = MaterialTheme.shapes.medium
-                    ) { Text("🐟 REPORTAR PESCA", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = { estadoPantalla = EstadoOperacion.ESPERA_CONFIRMACION },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7D5A7A)),
-                        modifier = Modifier.fillMaxWidth(0.85f).height(60.dp), shape = MaterialTheme.shapes.medium
-                    ) { Text("🏁 LLEGADA A PLANTA (ARRIBO)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
-                }
-
-                EstadoOperacion.ESPERA_CONFIRMACION -> {
-                    // --- ETAPA 3: ESPERANDO CONFIRMACIÓN ---
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    LaunchedEffect(Unit) {
-                        while (true) {
-                            kotlinx.coroutines.delay(3000)
-                            try {
-                                val numeroRuta = "ORD-2026-1792104421" // Ojo: Reemplaza por tu variable real
-                                val respuesta = RetrofitClient.instance.verificarEstado(numeroRuta)
-
-                                if (respuesta.status == "success") {
-                                    val estadoEnBaseDeDatos = respuesta.estado_ruta
-                                    if (estadoEnBaseDeDatos == "Finalizada") {
-                                        // CUANDO LA WEB APRUEBA: Limpia los campos y regresa al inicio
-                                        Toast.makeText(context, "✅ La consola te ha dado de ALTA.", Toast.LENGTH_LONG).show()
-                                        origenTexto = ""
-                                        listaPlataformas = listOf(PlataformaData(nombre = "Plataforma 1"))
-                                        estadoPantalla = EstadoOperacion.REGISTRO_INICIAL
-                                        break
+            } else if (ruta == null) {
+                Text(if (cargando) "Cargando ruta..." else "No se encontró la ruta asignada.")
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                OutlinedButton(onClick = { cargarRutas() }, enabled = !cargando) { Text("Reintentar") }
+            } else {
+                Text(ruta.numero, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                Text("${ruta.origen ?: "Sin origen"} → ${ruta.destino ?: "Sin destino"}")
+                Text("Estado: ${ruta.estado}", fontWeight = FontWeight.SemiBold)
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                if (tipo == null) {
+                    OutlinedButton(onClick = { cargarRutas() }, enabled = !cargando) { Text(if (cargando) "Actualizando..." else "Actualizar estado") }
+                    if (activa) {
+                        listOf("Inicio de Ruta", "Pesca", "Novedad en Vía", "Arribo a Destino").forEach { opcion ->
+                            Button(onClick = { origen = if (opcion == "Arribo a Destino") ruta.destino.orEmpty() else ruta.origen.orEmpty(); tipo = opcion }, modifier = Modifier.fillMaxWidth()) { Text(opcion.uppercase()) }
+                        }
+                    } else if (ruta.estado == "En espera de confirmación") {
+                        Text("El arribo fue registrado. Espera la confirmación desde la página web.")
+                    } else Text("Esta ruta ya está finalizada.")
+                } else {
+                    val tipoActual = tipo!!
+                    Text(tipoActual, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    OutlinedTextField(value = origen, onValueChange = { if (it.length <= 100) origen = it }, label = { Text("Ubicación / origen") }, modifier = Modifier.fillMaxWidth(), enabled = !enviando)
+                    OutlinedTextField(value = observaciones, onValueChange = { observaciones = it }, label = { Text(if (tipoActual == "Novedad en Vía") "Describe la novedad *" else "Observaciones") }, modifier = Modifier.fillMaxWidth(), enabled = !enviando)
+                    if (tipoActual == "Inicio de Ruta" || tipoActual == "Pesca") {
+                        plataformas.forEachIndexed { index, plataforma ->
+                            OutlinedCard(Modifier.fillMaxWidth()) {
+                                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedTextField(value = plataforma.nombre, onValueChange = { valor -> plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(nombre = valor.take(50)) else it } }, label = { Text("Plataforma / guía *") }, modifier = Modifier.fillMaxWidth(), enabled = !enviando)
+                                    plataforma.foto?.let { uri -> AsyncImage(model = Uri.parse(uri), contentDescription = "Foto de la guía", modifier = Modifier.size(120.dp)) }
+                                    OutlinedButton(onClick = { fotoDestino = plataforma.id; tomarFoto() }, enabled = !enviando) { Text(if (plataforma.foto == null) "Tomar foto de guía" else "Cambiar foto de guía") }
+                                    if (plataforma.foto != null) TextButton(onClick = { deleteCameraPhoto(context, plataforma.foto); plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(foto = null) else it } }, enabled = !enviando) { Text("Quitar foto") }
+                                    plataforma.piscinas.forEachIndexed { piscinaIndex, piscina ->
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            OutlinedTextField(value = piscina.numero, onValueChange = { valor ->
+                                                val piscinas = plataforma.piscinas.toMutableList(); piscinas[piscinaIndex] = piscina.copy(numero = valor.take(50))
+                                                plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = piscinas) else it }
+                                            }, label = { Text("Piscina") }, modifier = Modifier.weight(1f), enabled = !enviando)
+                                            OutlinedTextField(value = piscina.libras, onValueChange = { valor ->
+                                                val piscinas = plataforma.piscinas.toMutableList(); piscinas[piscinaIndex] = piscina.copy(libras = valor.take(12))
+                                                plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = piscinas) else it }
+                                            }, label = { Text("Libras") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), enabled = !enviando)
+                                        }
+                                        if (plataforma.piscinas.size > 1) TextButton(onClick = { plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = it.piscinas.filterIndexed { i, _ -> i != piscinaIndex }) else it } }, enabled = !enviando) { Text("Quitar piscina") }
                                     }
+                                    TextButton(onClick = { plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = it.piscinas + PiscinaData()) else it } }, enabled = !enviando && plataforma.piscinas.size < 50) { Text("Añadir piscina") }
+                                    if (plataformas.size > 1) TextButton(onClick = { plataforma.foto?.let { deleteCameraPhoto(context, it) }; plataformas = plataformas.filterIndexed { i, _ -> i != index } }, enabled = !enviando) { Text("Quitar plataforma") }
                                 }
-                            } catch (e: Exception) {
-                                Log.e("API_ERROR", "Error: ${e.message}")
                             }
                         }
+                        OutlinedButton(onClick = { plataformas = plataformas + PlataformaData() }, enabled = !enviando && plataformas.size < 8) { Text("Añadir plataforma") }
+                    } else {
+                        fotoGeneral?.let { AsyncImage(model = Uri.parse(it), contentDescription = "Foto de evidencia", modifier = Modifier.size(120.dp)) }
+                        OutlinedButton(onClick = { fotoDestino = "general"; tomarFoto() }, enabled = !enviando) { Text(if (fotoGeneral == null) "Añadir foto" else "Cambiar foto") }
+                        fotoGeneral?.let { uri -> TextButton(onClick = { deleteCameraPhoto(context, uri); fotoGeneral = null }, enabled = !enviando) { Text("Quitar foto") } }
                     }
-
-                    Text("⏳ ESPERANDO CONFIRMACIÓN", fontWeight = FontWeight.Bold, fontSize = 22.sp, color = Color(0xFFF39C12))
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text("El arribo ha sido notificado exitosamente.\nEsperando que la Consola Central dé de alta la ruta.", color = Color.DarkGray, textAlign = TextAlign.Center, fontSize = 16.sp)
-                    Spacer(modifier = Modifier.height(40.dp))
-
-                    Button(
-                        onClick = {
-                            Toast.makeText(context, "✅ La consola te ha dado de ALTA.", Toast.LENGTH_LONG).show()
-                            origenTexto = ""
-                            listaPlataformas = listOf(PlataformaData(nombre = "Plataforma 1"))
-                            estadoPantalla = EstadoOperacion.REGISTRO_INICIAL
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF27AE60)),
-                        modifier = Modifier.fillMaxWidth(0.85f).height(60.dp), shape = MaterialTheme.shapes.medium
-                    ) { Text("✅ DAR DE BAJA (NUEVA RUTA)", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp) }
+                    Button(onClick = {
+                        val esCarga = tipoActual == "Inicio de Ruta" || tipoActual == "Pesca"
+                        val errorFormulario = when {
+                            !activa -> "La ruta ya no acepta reportes. Actualiza su estado."
+                            tipoActual == "Novedad en Vía" && observaciones.isBlank() -> "Describe la novedad."
+                            esCarga && plataformas.any { it.nombre.isBlank() } -> "Indica el nombre de cada plataforma."
+                            esCarga && plataformas.flatMap { it.piscinas }.any { it.libras.isNotBlank() && (it.libras.replace(',', '.').toDoubleOrNull()?.let { n -> n < 0 || n > 99999999.99 } != false) } -> "Indica un libraje válido."
+                            else -> null
+                        }
+                        if (errorFormulario != null) {
+                            Toast.makeText(context, errorFormulario, Toast.LENGTH_LONG).show()
+                        } else {
+                            enviando = true
+                            scope.launch {
+                                try {
+                                    val fotos = if (esCarga) plataformas.mapIndexedNotNull { i, p -> p.foto?.let { "foto_$i" to it } } else listOfNotNull(fotoGeneral?.let { "foto_0" to it })
+                                    val datos = if (esCarga) plataformas.mapIndexed { i, p -> mapOf("identificador" to p.nombre.trim(), "foto_campo" to "foto_$i", "piscinas" to p.piscinas.map { mapOf("numero" to it.numero.trim(), "libraje" to it.libras.trim().replace(',', '.')) }) } else emptyList()
+                                    val partes = withContext(Dispatchers.IO) { photoParts(context, fotos) }
+                                    fun texto(valor: String) = valor.toRequestBody("text/plain; charset=utf-8".toMediaType())
+                                    val respuesta = RetrofitClient.instance.enviarReporte(texto(ruta.numero), texto(usuarioId.toString()), texto(origen.trim()), texto(Gson().toJson(datos)), texto(observaciones.trim()), texto(tipoActual), partes)
+                                    Toast.makeText(context, respuesta.mensaje, Toast.LENGTH_LONG).show()
+                                    if (respuesta.status == "success") { limpiarFormulario(); cargarRutas() }
+                                } catch (e: CancellationException) { throw e
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "No se pudo enviar el reporte. Revisa la conexión y vuelve a consultar la ruta antes de reintentar.", Toast.LENGTH_LONG).show()
+                                } finally { enviando = false }
+                            }
+                        }
+                    }, enabled = !enviando && activa, modifier = Modifier.fillMaxWidth()) { Text(if (enviando) "ENVIANDO..." else "ENVIAR REPORTE") }
                 }
             }
         }

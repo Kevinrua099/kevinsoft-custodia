@@ -15,7 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.custodia_app.network.LoginRequest
 import com.example.custodia_app.network.RetrofitClient
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
+import retrofit2.HttpException
+import java.io.IOException
+import java.net.SocketTimeoutException
 
 @Composable
 fun LoginScreen(navController: NavController) {
@@ -65,7 +69,6 @@ fun LoginScreen(navController: NavController) {
                     coroutineScope.launch {
                         try {
                             val response = RetrofitClient.instance.login(LoginRequest(cedula, password))
-                            isLoading = false
 
                             if(response.status == "success") {
                                 Toast.makeText(context, "✅ ${response.mensaje}", Toast.LENGTH_SHORT).show()
@@ -73,7 +76,8 @@ fun LoginScreen(navController: NavController) {
                                 // Guardamos el nombre para que las otras pantallas lo lean.
                                 val nombreReal = response.usuario?.nombres ?: response.mensaje.removePrefix("Bienvenido ")
                                 val prefs = context.getSharedPreferences("CustodiaPrefs", 0)
-                                prefs.edit().putString("usuarioLogueado", nombreReal).apply()
+                                prefs.edit().putString("usuarioLogueado", nombreReal)
+                                    .putInt("usuarioId", response.usuario?.id ?: 0).apply()
 
                                 // 2. Navegamos al NUEVO MENÚ y borramos el login del historial
                                 navController.navigate("menu") {
@@ -82,9 +86,18 @@ fun LoginScreen(navController: NavController) {
                             } else {
                                 Toast.makeText(context, "⚠️ ${response.mensaje}", Toast.LENGTH_LONG).show()
                             }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: SocketTimeoutException) {
+                            Toast.makeText(context, "El servidor tardó demasiado en responder. Inténtalo de nuevo en un momento.", Toast.LENGTH_LONG).show()
+                        } catch (e: HttpException) {
+                            Toast.makeText(context, "El servidor respondió con un error (${e.code()}). Inténtalo de nuevo más tarde.", Toast.LENGTH_LONG).show()
+                        } catch (e: IOException) {
+                            Toast.makeText(context, "No se pudo conectar con el servidor. Comprueba tu conexión a internet e inténtalo de nuevo.", Toast.LENGTH_LONG).show()
                         } catch (e: Exception) {
+                            Toast.makeText(context, "No se pudo procesar la respuesta del servidor. Inténtalo de nuevo más tarde.", Toast.LENGTH_LONG).show()
+                        } finally {
                             isLoading = false
-                            Toast.makeText(context, "No se pudo conectar con el servidor. Comprueba la conexión e inténtalo de nuevo.", Toast.LENGTH_LONG).show()
                         }
                     }
                 } else {
