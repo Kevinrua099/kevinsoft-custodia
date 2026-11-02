@@ -107,6 +107,7 @@ CREATE TABLE inspeccion_vehiculos (
   observaciones_estado text,
   fecha_hora_recepcion datetime DEFAULT CURRENT_TIMESTAMP,
   usuario_nombre varchar(100) DEFAULT NULL,
+  tipo_inspeccion enum('Recepción','Entrega') NOT NULL DEFAULT 'Recepción',
   FOREIGN KEY (id_usuario) REFERENCES usuarios (id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 

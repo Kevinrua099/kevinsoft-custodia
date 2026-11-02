@@ -188,20 +188,21 @@ fun ReporteScreen(navController: NavController) {
                                             OutlinedTextField(value = piscina.numero, onValueChange = { valor ->
                                                 val piscinas = plataforma.piscinas.toMutableList(); piscinas[piscinaIndex] = piscina.copy(numero = valor.take(50))
                                                 plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = piscinas) else it }
-                                            }, label = { Text("Piscina") }, modifier = Modifier.weight(1f), enabled = !enviando)
+                                            }, label = { Text("Piscina *") }, modifier = Modifier.weight(1f), enabled = !enviando)
                                             OutlinedTextField(value = piscina.libras, onValueChange = { valor ->
                                                 val piscinas = plataforma.piscinas.toMutableList(); piscinas[piscinaIndex] = piscina.copy(libras = valor.take(12))
                                                 plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = piscinas) else it }
-                                            }, label = { Text("Libras") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), enabled = !enviando)
+                                            }, label = { Text("Libras *") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), enabled = !enviando)
                                         }
                                         if (plataforma.piscinas.size > 1) TextButton(onClick = { plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = it.piscinas.filterIndexed { i, _ -> i != piscinaIndex }) else it } }, enabled = !enviando) { Text("Quitar piscina") }
                                     }
-                                    TextButton(onClick = { plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = it.piscinas + PiscinaData()) else it } }, enabled = !enviando && plataforma.piscinas.size < 50) { Text("Añadir piscina") }
+                                    Text("Total plataforma: ${String.format(java.util.Locale.US, "%.2f", plataforma.piscinas.sumOf { it.libras.replace(',', '.').toDoubleOrNull() ?: 0.0 })} lb", fontWeight = FontWeight.Bold)
+                                    TextButton(onClick = { plataformas = plataformas.map { if (it.id == plataforma.id) it.copy(piscinas = it.piscinas + PiscinaData()) else it } }, enabled = !enviando && plataforma.piscinas.size < 50) { Text("Agregar piscina") }
                                     if (plataformas.size > 1) TextButton(onClick = { plataforma.foto?.let { deleteCameraPhoto(context, it) }; plataformas = plataformas.filterIndexed { i, _ -> i != index } }, enabled = !enviando) { Text("Quitar plataforma") }
                                 }
                             }
                         }
-                        OutlinedButton(onClick = { plataformas = plataformas + PlataformaData() }, enabled = !enviando && plataformas.size < 8) { Text("Añadir plataforma") }
+                        OutlinedButton(onClick = { plataformas = plataformas + PlataformaData() }, enabled = !enviando && plataformas.size < 8) { Text("Agregar plataforma") }
                     } else {
                         fotoGeneral?.let { AsyncImage(model = Uri.parse(it), contentDescription = "Foto de evidencia", modifier = Modifier.size(120.dp)) }
                         OutlinedButton(onClick = { fotoDestino = "general"; tomarFoto() }, enabled = !enviando) { Text(if (fotoGeneral == null) "Añadir foto" else "Cambiar foto") }
@@ -213,7 +214,9 @@ fun ReporteScreen(navController: NavController) {
                             !activa -> "La ruta ya no acepta reportes. Actualiza su estado."
                             tipoActual == "Novedad en Vía" && observaciones.isBlank() -> "Describe la novedad."
                             esCarga && plataformas.any { it.nombre.isBlank() } -> "Indica el nombre de cada plataforma."
-                            esCarga && plataformas.flatMap { it.piscinas }.any { it.libras.isNotBlank() && (it.libras.replace(',', '.').toDoubleOrNull()?.let { n -> n < 0 || n > 99999999.99 } != false) } -> "Indica un libraje válido."
+                            esCarga && plataformas.any { it.foto == null } -> "Adjunta la foto de la guía de cada plataforma."
+                            esCarga && plataformas.flatMap { it.piscinas }.any { it.numero.isBlank() } -> "Indica el número de cada piscina."
+                            esCarga && plataformas.flatMap { it.piscinas }.any { piscina -> val valor = piscina.libras.trim().replace(',', '.'); !Regex("^\\d{1,8}(?:\\.\\d{1,2})?$").matches(valor) || (valor.toDoubleOrNull() ?: 0.0) <= 0.0 } -> "Indica libras mayores que cero, con hasta dos decimales."
                             else -> null
                         }
                         if (errorFormulario != null) {

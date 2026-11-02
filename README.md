@@ -7,7 +7,7 @@ Proyecto de presentación con una consola web, una API PHP/MySQL y una aplicaci�
 - `web/`: interfaz web en HTML, CSS y JavaScript.
 - `api/`: API PHP y conexión MySQL.
 - `Custodia_App/`: aplicación Android (Kotlin y Jetpack Compose).
-- `database/schema.sql`: estructura vacía de MySQL, sin datos personales. Para una base existente, `database/patrullas_migration.sql` y `database/reportes_fotos_migration.sql` agregan el almacenamiento de fotos sin borrar datos.
+- `database/schema.sql`: estructura vacía de MySQL, sin datos personales. Para una base existente, las migraciones de `database/` agregan almacenamiento de fotos y el tipo de inspección sin borrar datos.
 - `Dockerfile` y `render.yaml`: configuración para desplegar en Render.
 - `CONEXION.md`: detalles de conexión local y Android.
 
@@ -73,9 +73,10 @@ Instala `Custodia_App/app/build/outputs/apk/debug/app-debug.apk` en el teléfono
 
 ### 4. Actualizar una instalación existente
 
-1. Ejecuta `database/reportes_fotos_migration.sql` en la base de datos usada por el servicio. Si aún no se había instalado Control de Patrullas, ejecuta también `database/patrullas_migration.sql`. Ambos conservan los datos existentes.
+1. Ejecuta `database/patrullas_entrega_migration.sql` una sola vez en la base de datos usada por el servicio. Si aún no se habían instalado las fotos, ejecuta también `database/reportes_fotos_migration.sql` y `database/patrullas_migration.sql`. Estas migraciones conservan los datos existentes.
 2. Publica los cambios de `api/` y `web/` en el servicio de Render y espera a que termine el despliegue. La app nueva necesita la API actualizada para identificar al usuario y sus rutas.
-3. Instala el APK nuevo e inicia sesión de nuevo. En la web, crea un salvoconducto y asigna al usuario como chofer o custodio; la ruta aparecerá en **Custodia en ruta**. Los reportes y fotos se verán en **Reportes en Ruta**; las inspecciones se verán en **Control de Patrullas**. Después de notificar el arribo, la web puede finalizar la ruta y la app actualizará el estado.
+3. Instala el APK nuevo e inicia sesión de nuevo. En la app, registra la recepción de la patrulla con al menos una foto. Al seleccionar a ese usuario como líder/chofer del salvoconducto, se propone su patrulla disponible y se puede elegir otra en el selector. La entrega también se registra en la app con fotos; ambas inspecciones aparecen en **Control de Patrullas**. Las inspecciones antiguas sin usuario identificado no generan una propuesta automática.
+4. Asigna al usuario como chofer o custodio para que la ruta aparezca en **Custodia en ruta**. En Inicio de Ruta o Pesca, agrega cada plataforma con su foto de guía y una o más piscinas con su libraje. Las fotos, los datos y los totales reportados se ven en **Reportes en Ruta**. Después de notificar el arribo, la web puede finalizar la ruta y la app actualizará el estado.
 
 ## Prueba de integración local
 

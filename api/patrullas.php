@@ -47,6 +47,8 @@ try {
                     'observaciones' => $fila['observaciones_estado'],
                     'fecha_hora_recepcion' => $fila['fecha_hora_recepcion'],
                     'usuario_nombre' => $fila['usuario_nombre'],
+                    'id_usuario' => $fila['id_usuario'],
+                    'tipo_inspeccion' => $fila['tipo_inspeccion'],
                     'fotos' => [],
                 ];
             }
@@ -70,6 +72,22 @@ try {
     }
 
     $usuario = trim($_POST['usuario_nombre'] ?? '') ?: 'Desconocido';
+    $usuarioId = filter_var($_POST['usuario_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $tipo = trim($_POST['tipo_inspeccion'] ?? 'Recepción');
+    if (!in_array($tipo, ['Recepción', 'Entrega'], true) || ($tipo === 'Entrega' && !$usuarioId)) {
+        echo json_encode(['status' => 'error', 'mensaje' => 'Selecciona un tipo de inspección y un usuario válidos.']);
+        exit;
+    }
+    if ($usuarioId) {
+        $consultaUsuario = $conexion->prepare("SELECT nombres_completos, cia_empresa FROM usuarios WHERE id_usuario = ? AND estado = 'Activo'");
+        $consultaUsuario->execute([$usuarioId]);
+        $datosUsuario = $consultaUsuario->fetch(PDO::FETCH_ASSOC);
+        if (!$datosUsuario) {
+            echo json_encode(['status' => 'error', 'mensaje' => 'Usuario no encontrado. Inicia sesión de nuevo.']);
+            exit;
+        }
+        $usuario = $datosUsuario['nombres_completos'];
+    }
     $placa = strtoupper(trim($_POST['placa'] ?? ''));
     $disco = strtoupper(trim($_POST['disco'] ?? ''));
     $kmTexto = trim($_POST['kilometraje'] ?? '');
@@ -104,10 +122,19 @@ try {
         echo json_encode(['status' => 'error', 'mensaje' => 'Puedes adjuntar hasta 8 fotos.']);
         exit;
     }
+    if ($usuarioId && count($archivos) === 0) {
+        echo json_encode(['status' => 'error', 'mensaje' => 'Adjunta al menos una foto del estado de la patrulla.']);
+        exit;
+    }
 
     $conexion->beginTransaction();
-    $stmt = $conexion->prepare('INSERT INTO inspeccion_vehiculos (usuario_nombre, placa, disco, kilometraje, observaciones_estado) VALUES (?, ?, ?, ?, ?)');
-    $stmt->execute([$usuario, $placa, $disco, $kilometraje, $observaciones]);
+    if ($usuarioId && $tipo === 'Recepción') {
+        // La placa permite relacionar la inspección con el vehículo del salvoconducto.
+        $vehiculo = $conexion->prepare("INSERT INTO vehiculos (placa, disco, cia_vehiculo) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE disco = VALUES(disco)");
+        $vehiculo->execute([$placa, $disco, $datosUsuario['cia_empresa'] ?: 'PRINCIPAL']);
+    }
+    $stmt = $conexion->prepare('INSERT INTO inspeccion_vehiculos (id_usuario, usuario_nombre, placa, disco, kilometraje, observaciones_estado, tipo_inspeccion) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    $stmt->execute([$usuarioId ?: null, $usuario, $placa, $disco, $kilometraje, $observaciones, $tipo]);
     $idInspeccion = $conexion->lastInsertId();
     $stmtFoto = $conexion->prepare('INSERT INTO inspeccion_fotos (id_inspeccion, ruta_foto) VALUES (?, NULL)');
     $stmtArchivo = $conexion->prepare('INSERT INTO inspeccion_fotos_archivo (id_foto, tipo_mime, contenido) VALUES (?, ?, ?)');

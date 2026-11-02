@@ -42,20 +42,37 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.ok((await json(`api/historial_app.php?usuario=${usuario}`)).data.some(item => item.numero_registro === numero));
     assert.ok(!(await json(`api/historial_app.php?usuario=${otroUsuario}`)).data.some(item => item.numero_registro === numero));
 
-    const rechazado = await json('api/reportes_app.php', { method: 'POST', body: formulario(numero, otroUsuario, 'Pesca') });
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aX8AAAAASUVORK5CYII=', 'base64');
+    const sinAsignacion = formulario(numero, otroUsuario, 'Pesca');
+    sinAsignacion.set('data_json', JSON.stringify([{ identificador: 'Guía', foto_campo: 'foto_0', piscinas: [{ numero: '1', libraje: '100' }] }]));
+    sinAsignacion.set('foto_0', new Blob([png], { type: 'image/png' }), 'guia.png');
+    const rechazado = await json('api/reportes_app.php', { method: 'POST', body: sinAsignacion });
     assert.equal(rechazado.status, 'error');
+    assert.match(rechazado.mensaje, /no está asignada/);
     assert.equal(Number(sql(`SELECT COUNT(*) FROM reportes_pesca WHERE id_ruta=${ruta}`)), 0);
 
-    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aX8AAAAASUVORK5CYII=', 'base64');
     const inspeccion = new FormData();
-    for (const [key, value] of Object.entries({ usuario_nombre: 'Prueba Uno', placa: `T${suffix}`.slice(0, 20), disco: 'TEST', kilometraje: '1234', observaciones: 'Prueba de sincronización' })) inspeccion.set(key, value);
+    for (const [key, value] of Object.entries({ usuario_nombre: 'Prueba Uno', usuario_id: String(usuario), tipo_inspeccion: 'Recepción', placa: `T${suffix}`.slice(0, 20), disco: 'TEST', kilometraje: '1234', observaciones: 'Prueba de sincronización' })) inspeccion.set(key, value);
     inspeccion.set('foto_0', new Blob([png], { type: 'image/png' }), 'patrulla.png');
     assert.equal((await json('api/patrullas.php', { method: 'POST', body: inspeccion })).status, 'success');
     const registro = (await json('api/patrullas.php')).data.find(item => item.placa === `T${suffix}`);
     assert.equal(registro.kilometraje, 1234);
     assert.equal(registro.fotos[0].guardada, true);
+    assert.equal(registro.tipo_inspeccion, 'Recepción');
+    const listas = await json('api/salvoconductos.php');
+    const vehiculo = listas.vehiculos.find(item => item.placa === `T${suffix}`);
+    assert.ok(vehiculo);
+    assert.ok(listas.patrullas_titulares.some(item => Number(item.id_usuario) === usuario && Number(item.id_vehiculo) === Number(vehiculo.id_vehiculo)));
     const fotoPatrulla = await fetch(new URL(`api/patrullas.php?foto=${registro.fotos[0].id}`, base));
     assert.deepEqual(Buffer.from(await fotoPatrulla.arrayBuffer()), png);
+
+    const entrega = new FormData();
+    for (const [key, value] of Object.entries({ usuario_id: String(usuario), tipo_inspeccion: 'Entrega', placa: `T${suffix}`, disco: 'TEST' })) entrega.set(key, value);
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: entrega })).status, 'error');
+    entrega.set('foto_0', new Blob([png], { type: 'image/png' }), 'entrega.png');
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: entrega })).status, 'success');
+    assert.equal((await json('api/patrullas.php')).data.find(item => item.placa === `T${suffix}`).tipo_inspeccion, 'Entrega');
+    assert.ok(!(await json('api/salvoconductos.php')).patrullas_titulares.some(item => Number(item.id_usuario) === usuario));
 
     const invalido = formulario(numero, usuario, 'Pesca');
     invalido.set('foto_0', new Blob(['no es una imagen'], { type: 'image/png' }), 'falsa.png');
@@ -63,12 +80,24 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.equal(Number(sql(`SELECT COUNT(*) FROM reportes_pesca WHERE id_ruta=${ruta}`)), 0);
 
     const form = formulario(numero, usuario, 'Pesca');
-    form.set('data_json', JSON.stringify([{ identificador: 'Guía A', foto_campo: 'foto_0', piscinas: [{ numero: '12', libraje: '150.50' }] }]));
+    form.set('data_json', JSON.stringify([
+        { identificador: 'Guía A', foto_campo: 'foto_0', piscinas: [{ numero: '12', libraje: '2000' }, { numero: '13', libraje: '1000' }] },
+        { identificador: 'Guía B', foto_campo: 'foto_1', piscinas: [{ numero: '12', libraje: '150.50' }] }
+    ]));
     form.set('foto_0', new Blob([png], { type: 'image/png' }), 'guia.png');
+    assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'error');
+    form.set('foto_1', new Blob([png], { type: 'image/png' }), 'guia2.png');
+    const sinLibraje = formulario(numero, usuario, 'Pesca');
+    sinLibraje.set('data_json', JSON.stringify([{ identificador: 'Guía A', foto_campo: 'foto_0', piscinas: [{ numero: '12', libraje: '' }] }]));
+    sinLibraje.set('foto_0', new Blob([png], { type: 'image/png' }), 'guia.png');
+    assert.equal((await json('api/reportes_app.php', { method: 'POST', body: sinLibraje })).status, 'error');
     assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'success');
     const reporte = (await json('api/reportes.php')).data.find(item => item.numero_registro === numero);
     assert.equal(reporte.guias[0].identificador_plataforma, 'Guía A');
-    assert.equal(reporte.guias[0].piscinas[0].libraje, '150.50');
+    assert.equal(reporte.guias.length, 2);
+    assert.deepEqual(reporte.guias[0].piscinas.map(item => item.libraje), ['2000.00', '1000.00']);
+    assert.equal(reporte.guias[1].piscinas[0].libraje, '150.50');
+    assert.notEqual(reporte.guias[0].ruta_foto_guia, reporte.guias[1].ruta_foto_guia);
     assert.equal(Number(reporte.evidencias[0].guardada), 1);
     const foto = await fetch(new URL(`api/reportes_app.php?evidencia=${reporte.evidencias[0].id_evidencia}`, base));
     assert.equal(foto.headers.get('content-type'), 'image/png');

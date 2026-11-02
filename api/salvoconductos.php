@@ -14,12 +14,23 @@ try {
         $q_usuarios = $conexion->query("SELECT id_usuario, cedula, nombres_completos, cia_empresa, rol FROM usuarios WHERE estado = 'Activo' ORDER BY nombres_completos ASC");
         $q_armas = $conexion->query("SELECT id_arma, serie, tipo_arma, marca, calibre FROM armamento WHERE estado = 'En Armería' ORDER BY tipo_arma ASC");
         $q_vehiculos = $conexion->query("SELECT id_vehiculo, placa, cia_vehiculo FROM vehiculos WHERE estado = 'Disponible' ORDER BY placa ASC");
+        // La última recepción vigente del titular se invalida al entregar esa placa
+        // o cuando otra persona registra una inspección posterior de la misma unidad.
+        $q_asignaciones = $conexion->query("SELECT i.id_usuario, v.id_vehiculo FROM inspeccion_vehiculos i
+            JOIN vehiculos v ON v.placa = i.placa AND v.estado = 'Disponible'
+            WHERE i.id_usuario IS NOT NULL AND i.tipo_inspeccion = 'Recepción'
+            AND i.id_inspeccion = (SELECT MAX(ultima.id_inspeccion) FROM inspeccion_vehiculos ultima WHERE ultima.placa = i.placa)
+            AND NOT EXISTS (SELECT 1 FROM inspeccion_vehiculos otra
+                JOIN vehiculos vo ON vo.placa = otra.placa AND vo.estado = 'Disponible'
+                WHERE otra.id_usuario = i.id_usuario AND otra.tipo_inspeccion = 'Recepción' AND otra.id_inspeccion > i.id_inspeccion
+                AND otra.id_inspeccion = (SELECT MAX(u.id_inspeccion) FROM inspeccion_vehiculos u WHERE u.placa = otra.placa))");
         
         echo json_encode([
             "status" => "success", 
             "usuarios" => $q_usuarios->fetchAll(PDO::FETCH_ASSOC),
             "armas" => $q_armas->fetchAll(PDO::FETCH_ASSOC),
-            "vehiculos" => $q_vehiculos->fetchAll(PDO::FETCH_ASSOC)
+            "vehiculos" => $q_vehiculos->fetchAll(PDO::FETCH_ASSOC),
+            "patrullas_titulares" => $q_asignaciones->fetchAll(PDO::FETCH_ASSOC)
         ]);
     }
     
@@ -39,7 +50,7 @@ try {
             ':asunto' => trim(strtoupper($datos['asunto'])),
             ':origen' => trim(strtoupper($datos['origen'])),
             ':destino' => trim(strtoupper($datos['destino'])),
-            ':vehiculo' => $datos['vehiculo'],
+            ':vehiculo' => !empty($datos['vehiculo']) ? $datos['vehiculo'] : null,
             ':creado_por' => $datos['creado_por'] // <--- Aquí guardamos quién lo hizo
         ]);
         

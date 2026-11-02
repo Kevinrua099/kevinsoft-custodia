@@ -31,6 +31,7 @@ fun InspeccionScreen(navController: NavController) {
     var disco by rememberSaveable { mutableStateOf("") }
     var kilometraje by rememberSaveable { mutableStateOf("") }
     var observaciones by rememberSaveable { mutableStateOf("") }
+    var tipo by rememberSaveable { mutableStateOf("Recepción") }
 
     var listaFotos by rememberSaveable { mutableStateOf(listOf<String>()) }
     val tomarFoto = rememberCameraCapture { uri -> listaFotos = listaFotos + uri }
@@ -40,13 +41,19 @@ fun InspeccionScreen(navController: NavController) {
     val context = LocalContext.current
     val prefs = context.getSharedPreferences("CustodiaPrefs", 0)
     val nombre = prefs.getString("usuarioLogueado", "Desconocido") ?: "Desconocido"
+    val usuarioId = prefs.getInt("usuarioId", 0)
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("Recepción de Patrulla") }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary, titleContentColor = MaterialTheme.colorScheme.onPrimary)) }
+        topBar = { TopAppBar(title = { Text("Inspección de Patrulla") }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.primary, titleContentColor = MaterialTheme.colorScheme.onPrimary)) }
     ) { paddingValues ->
         LazyColumn(modifier = Modifier.fillMaxSize().padding(paddingValues).padding(16.dp)) {
             item {
-                Text("Registro de recepción", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Registro de recepción o entrega", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("Recepción", "Entrega").forEach { opcion ->
+                        FilterChip(selected = tipo == opcion, onClick = { tipo = opcion }, label = { Text(opcion) }, enabled = !isLoading)
+                    }
+                }
                 Text("Ingresa los datos y adjunta fotos del estado de la patrulla.", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 4.dp, bottom = 20.dp))
                 OutlinedTextField(value = disco, onValueChange = { if (it.length <= 50) disco = it }, label = { Text("Disco *") }, placeholder = { Text("Ej: Patrulla 583") }, singleLine = true, enabled = !isLoading, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
                 OutlinedTextField(value = placa, onValueChange = { if (it.length <= 20) placa = it }, label = { Text("Placa *") }, placeholder = { Text("Ej: GLT-2201") }, singleLine = true, enabled = !isLoading, modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp))
@@ -83,11 +90,15 @@ fun InspeccionScreen(navController: NavController) {
                 Button(
                     onClick = {
                         if(disco.isBlank() || placa.isBlank()) { Toast.makeText(context, "Indica el disco y la placa", Toast.LENGTH_SHORT).show(); return@Button }
+                        if(usuarioId <= 0) { Toast.makeText(context, "Inicia sesión de nuevo para identificarte", Toast.LENGTH_LONG).show(); return@Button }
+                        if(listaFotos.isEmpty()) { Toast.makeText(context, "Adjunta al menos una foto de la patrulla", Toast.LENGTH_LONG).show(); return@Button }
                         if(kilometraje.isNotEmpty() && kilometraje.toIntOrNull() == null) { Toast.makeText(context, "Indica un kilometraje válido", Toast.LENGTH_SHORT).show(); return@Button }
                         isLoading = true
                         coroutineScope.launch {
                             try {
                                 val userBody = nombre.toRequestBody("text/plain".toMediaTypeOrNull())
+                                val usuarioIdBody = usuarioId.toString().toRequestBody("text/plain".toMediaTypeOrNull())
+                                val tipoBody = tipo.toRequestBody("text/plain; charset=utf-8".toMediaTypeOrNull())
                                 val placaBody = placa.trim().toRequestBody("text/plain".toMediaTypeOrNull())
                                 val discoBody = disco.trim().toRequestBody("text/plain".toMediaTypeOrNull())
                                 val kmBody = kilometraje.toRequestBody("text/plain".toMediaTypeOrNull())
@@ -97,10 +108,10 @@ fun InspeccionScreen(navController: NavController) {
                                     photoParts(context, listaFotos.mapIndexed { index, uri -> "foto_$index" to uri })
                                 }
 
-                                val response = RetrofitClient.instance.enviarInspeccion(userBody, placaBody, discoBody, kmBody, obsBody, partesFotos)
+                                val response = RetrofitClient.instance.enviarInspeccion(userBody, usuarioIdBody, tipoBody, placaBody, discoBody, kmBody, obsBody, partesFotos)
                                 if(response.status == "success") {
                                     listaFotos.forEach { deleteCameraPhoto(context, it) }
-                                    Toast.makeText(context, "✅ Vehículo Recibido", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "$tipo de patrulla registrada", Toast.LENGTH_LONG).show()
                                     navController.popBackStack()
                                 } else { Toast.makeText(context, "Error: ${response.mensaje}", Toast.LENGTH_LONG).show() }
                             } catch (e: CancellationException) {
@@ -113,7 +124,7 @@ fun InspeccionScreen(navController: NavController) {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(55.dp), enabled = !isLoading
-                ) { Text(if(isLoading) "PROCESANDO..." else "CONFIRMAR RECEPCIÓN DE PATRULLA", fontWeight = FontWeight.Bold) }
+                ) { Text(if(isLoading) "PROCESANDO..." else "CONFIRMAR ${tipo.uppercase()} DE PATRULLA", fontWeight = FontWeight.Bold) }
             }
         }
     }

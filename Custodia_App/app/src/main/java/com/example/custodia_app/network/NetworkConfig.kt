@@ -42,6 +42,7 @@ data class InspeccionPatrulla(
     val observaciones: String? = null,
     @SerializedName("fecha_hora_recepcion") val fechaRecepcion: String? = null,
     @SerializedName("usuario_nombre") val usuarioNombre: String? = null,
+    @SerializedName("tipo_inspeccion") val tipoInspeccion: String? = null,
     val fotos: List<FotoPatrulla>? = null
 )
 data class PatrullasResponse(
@@ -77,6 +78,8 @@ interface ApiService {
     @POST("patrullas.php")
     suspend fun enviarInspeccion(
         @Part("usuario_nombre") usuario: RequestBody,
+        @Part("usuario_id") usuarioId: RequestBody,
+        @Part("tipo_inspeccion") tipo: RequestBody,
         @Part("placa") placa: RequestBody,
         @Part("disco") disco: RequestBody,
         @Part("kilometraje") kilometraje: RequestBody,

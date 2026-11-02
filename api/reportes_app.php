@@ -37,12 +37,20 @@ try {
     if (strlen($origen) > 100 || !in_array($tipo, ['Inicio de Ruta', 'Pesca', 'Novedad en Vía', 'Arribo a Destino'], true)) rechazarReporte('Datos del reporte no válidos.');
     if ($tipo === 'Novedad en Vía' && $observaciones === '') rechazarReporte('Describe la novedad.');
     if (!is_array($plataformas) || count($plataformas) > 8) rechazarReporte('Las plataformas no son válidas.');
+    $esCarga = in_array($tipo, ['Inicio de Ruta', 'Pesca'], true);
+    if ($esCarga && count($plataformas) === 0) rechazarReporte('Agrega al menos una plataforma.');
+    if (!$esCarga && count($plataformas) !== 0) rechazarReporte('Este tipo de reporte no admite plataformas.');
+    $camposFotos = [];
     foreach ($plataformas as $plat) {
-        if (!is_array($plat) || !isset($plat['identificador'], $plat['piscinas']) || !is_string($plat['identificador']) || trim($plat['identificador']) === '' || strlen($plat['identificador']) > 50 || !is_array($plat['piscinas']) || count($plat['piscinas']) > 50) rechazarReporte('Revisa los datos de las plataformas.');
+        if (!is_array($plat) || !isset($plat['identificador'], $plat['piscinas']) || !is_string($plat['identificador']) || trim($plat['identificador']) === '' || strlen($plat['identificador']) > 50 || !is_array($plat['piscinas']) || count($plat['piscinas']) < 1 || count($plat['piscinas']) > 50) rechazarReporte('Revisa los datos de las plataformas.');
+        $campo = $plat['foto_campo'] ?? '';
+        if (!is_string($campo) || !preg_match('/^foto_[0-7]$/', $campo) || in_array($campo, $camposFotos, true)) rechazarReporte('Cada plataforma debe tener su propia foto de guía.');
+        $camposFotos[] = $campo;
         foreach ($plat['piscinas'] as $piscina) {
+            if (!is_array($piscina)) rechazarReporte('Revisa los datos de las piscinas.');
             $num = $piscina['numero'] ?? '';
             $libras = $piscina['libraje'] ?? '';
-            if (!is_string($num) || strlen($num) > 50 || !is_string($libras) || ($libras !== '' && (!is_numeric($libras) || (float)$libras < 0 || (float)$libras > 99999999.99))) rechazarReporte('Revisa el número y libraje de las piscinas.');
+            if (!is_string($num) || trim($num) === '' || strlen($num) > 50 || !is_string($libras) || !preg_match('/^\d{1,8}(?:\.\d{1,2})?$/', $libras) || (float)$libras <= 0 || (float)$libras > 99999999.99) rechazarReporte('Indica la piscina y un libraje mayor que cero, con hasta dos decimales.');
         }
     }
 
@@ -56,6 +64,9 @@ try {
         $archivos[$key] = ['mime' => $info['mime'], 'contenido' => $contenido];
     }
     if (count($archivos) > 8) rechazarReporte('Puedes adjuntar hasta 8 fotos.');
+    foreach ($camposFotos as $campo) {
+        if (!isset($archivos[$campo])) rechazarReporte('Adjunta una foto de la guía de cada plataforma.');
+    }
 
     $conexion->beginTransaction();
     $consulta = $conexion->prepare('SELECT s.id_ruta, s.estado_ruta FROM salvoconductos_rutas s WHERE s.numero_registro = ? AND EXISTS (SELECT 1 FROM asignacion_personal_armas a WHERE a.id_ruta = s.id_ruta AND a.id_usuario = ?) FOR UPDATE');

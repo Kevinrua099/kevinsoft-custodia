@@ -62,7 +62,7 @@ function renderizarPatrullas() {
         const placa = document.createElement('strong');
         placa.textContent = item.placa || 'Sin placa';
         const disco = document.createElement('small');
-        disco.textContent = 'Disco: ' + (item.disco || 'No indicado');
+        disco.textContent = 'Disco: ' + (item.disco || 'No indicado') + ' · ' + (item.tipo_inspeccion || 'Recepción');
         vehiculo.append(placa, disco);
         const fecha = document.createElement('td');
         fecha.textContent = formatearFecha(item.fecha_hora_recepcion);
@@ -100,7 +100,8 @@ function mostrarDetalle(item) {
     const grid = document.createElement('div');
     grid.className = 'detail-grid';
     const kilometraje = item.kilometraje === null || item.kilometraje === '' ? 'No indicado' : Number(item.kilometraje).toLocaleString('es-EC') + ' km';
-    [['Disco', item.disco || 'No indicado'], ['Kilometraje', kilometraje], ['Recibida por', item.usuario_nombre || 'No indicado'], ['Fecha de recepción', formatearFecha(item.fecha_hora_recepcion)]].forEach(([etiqueta, valor]) => {
+    const entrega = item.tipo_inspeccion === 'Entrega';
+    [['Disco', item.disco || 'No indicado'], ['Kilometraje', kilometraje], [entrega ? 'Entregada por' : 'Recibida por', item.usuario_nombre || 'No indicado'], [entrega ? 'Fecha de entrega' : 'Fecha de recepción', formatearFecha(item.fecha_hora_recepcion)]].forEach(([etiqueta, valor]) => {
         const celda = document.createElement('div');
         celda.className = 'detail-item';
         const titulo = document.createElement('span');

@@ -4,6 +4,7 @@
 let opcionesUsuariosHTML = '<option value="">Seleccione personal...</option>';
 let opcionesArmasHTML = '<option value="">Sin arma asignada...</option>';
 let contadorCustodios = 1; // El HTML ya trae el "Custodio 1" por defecto
+let patrullasTitulares = [];
 
 document.addEventListener('DOMContentLoaded', function() {
     const nombreUsuario = localStorage.getItem('usuarioLogueado');
@@ -11,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('nombreUsuarioTop').innerText = '👤 ' + nombreUsuario;
 
     cargarListasDesplegables();
+    document.getElementById('chofer').addEventListener('change', sugerirPatrullaTitular);
 
     const formSalvoconducto = document.getElementById('formSalvoconducto');
     if(formSalvoconducto) {
@@ -122,6 +124,7 @@ function cargarListasDesplegables() {
     .then(res => res.json())
     .then(data => {
         if(data.status === 'success') {
+            patrullasTitulares = data.patrullas_titulares || [];
             
             let vehiculosHTML = '<option value="">Seleccione vehículo...</option>';
             data.vehiculos.forEach(v => { vehiculosHTML += `<option value="${v.id_vehiculo}">${v.placa} (${v.cia_vehiculo})</option>`; });
@@ -139,4 +142,11 @@ function cargarListasDesplegables() {
             document.getElementById('arma_custodio1').innerHTML = opcionesArmasHTML;
         }
     });
+}
+
+function sugerirPatrullaTitular() {
+    const titular = document.getElementById('chofer').value;
+    const asignacion = patrullasTitulares.find(item => String(item.id_usuario) === titular);
+    // El selector sigue editable para elegir otra unidad.
+    document.getElementById('vehiculo').value = asignacion ? String(asignacion.id_vehiculo) : '';
 }

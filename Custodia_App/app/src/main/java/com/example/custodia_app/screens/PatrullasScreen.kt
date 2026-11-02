@@ -82,7 +82,7 @@ fun PatrullasScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text("Recepción de patrullas", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Recepción y entrega de patrullas", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
                 Text("Registra y consulta las inspecciones más recientes.", modifier = Modifier.padding(top = 4.dp, bottom = 12.dp))
                 Button(onClick = { navController.navigate("inspeccion") }, modifier = Modifier.fillMaxWidth()) {
                     Text("＋ NUEVA INSPECCIÓN")
@@ -139,7 +139,7 @@ private fun TarjetaPatrulla(inspeccion: InspeccionPatrulla) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Text(inspeccion.placa?.takeIf { it.isNotBlank() } ?: "Sin placa", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text("Disco: ${inspeccion.disco?.takeIf { it.isNotBlank() } ?: "No indicado"}")
-            Text("Recepción: ${fechaPatrulla(inspeccion.fechaRecepcion)}", style = MaterialTheme.typography.bodySmall)
+            Text("${inspeccion.tipoInspeccion ?: "Recepción"}: ${fechaPatrulla(inspeccion.fechaRecepcion)}", style = MaterialTheme.typography.bodySmall)
             Text(
                 if (observaciones.isEmpty()) "Sin observaciones" else "Con observaciones",
                 color = if (observaciones.isEmpty()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,

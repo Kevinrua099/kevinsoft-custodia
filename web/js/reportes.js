@@ -146,6 +146,14 @@ function renderizarFeed(reportes) {
 
     for (const numRuta in rutasAgrupadas) {
         const ruta = rutasAgrupadas[numRuta];
+        const totalesPiscinas = new Map();
+        ruta.eventos.forEach(evento => (evento.guias || []).forEach(guia => (guia.piscinas || []).forEach(piscina => {
+            const numero = String(piscina.numero_piscina || '').trim();
+            const libras = Number(piscina.libraje);
+            if (numero && piscina.libraje !== null && piscina.libraje !== '' && Number.isFinite(libras)) {
+                totalesPiscinas.set(numero, (totalesPiscinas.get(numero) || 0) + libras);
+            }
+        })));
         // 2. Crear un ID único para cada ruta para no confundir las tarjetas
         const idUnico = "col_" + numRuta.replace(/[^a-zA-Z0-9]/g, "");
         
@@ -176,6 +184,7 @@ function renderizarFeed(reportes) {
             
             <div id="${idUnico}" class="collapse" aria-labelledby="head_${idUnico}">
                 <div class="card-body bg-light position-relative">
+                    ${totalesPiscinas.size ? `<div class="bg-white p-3 rounded border mb-3"><strong>Libraje reportado por piscina (todos los reportes de esta ruta)</strong><ul class="mb-0">${Array.from(totalesPiscinas, ([numero, libras]) => `<li>Piscina ${escaparHtml(numero)}: ${libras.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lb</li>`).join('')}</ul></div>` : ''}
                     <div class="timeline border-start border-2 border-secondary ms-4 ps-4 position-relative">
         `;
 
@@ -206,6 +215,7 @@ function renderizarFeed(reportes) {
 
             if (evento.guias && evento.guias.length > 0) {
                 evento.guias.forEach(guia => {
+                    const totalPlataforma = (guia.piscinas || []).reduce((total, piscina) => total + (Number(piscina.libraje) || 0), 0);
                     html += `
                     <div class="mb-3 px-2">
                         <p class="fw-bold text-primary mb-2"><i class="fas fa-truck-loading me-1"></i> ${escaparHtml(guia.identificador_plataforma || 'S/N')}</p>
@@ -223,7 +233,7 @@ function renderizarFeed(reportes) {
                     } else {
                         html += `<tr><td colspan="2" class="text-muted fst-italic">Sin piscinas registradas</td></tr>`;
                     }
-                    html += `</tbody></table></div>`;
+                    html += `</tbody><tfoot><tr><th>Total plataforma</th><th>${totalPlataforma.toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} lb</th></tr></tfoot></table></div>`;
                 });
             }
 
