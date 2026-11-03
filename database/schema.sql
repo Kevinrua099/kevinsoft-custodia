@@ -62,9 +62,15 @@ CREATE TABLE reportes_pesca (
   id_ruta int DEFAULT NULL,
   fecha_hora_reporte datetime DEFAULT NULL,
   origen_camaronera varchar(100) DEFAULT NULL,
+  destino_reporte varchar(100) DEFAULT NULL,
+  tipo_carga varchar(20) DEFAULT NULL,
+  id_usuario_reporte int DEFAULT NULL,
+  patrulla_placa varchar(20) DEFAULT NULL,
+  patrulla_disco varchar(50) DEFAULT NULL,
   observaciones text,
   tipo_reporte varchar(50) DEFAULT 'Pesca',
-  FOREIGN KEY (id_ruta) REFERENCES salvoconductos_rutas (id_ruta)
+  FOREIGN KEY (id_ruta) REFERENCES salvoconductos_rutas (id_ruta),
+  FOREIGN KEY (id_usuario_reporte) REFERENCES usuarios (id_usuario)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE guias_plataformas (

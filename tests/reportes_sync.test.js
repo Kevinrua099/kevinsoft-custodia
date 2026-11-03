@@ -59,6 +59,7 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.equal(registro.kilometraje, 1234);
     assert.equal(registro.fotos[0].guardada, true);
     assert.equal(registro.tipo_inspeccion, 'Recepción');
+    assert.equal((await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero).patrulla_recibida.placa, `T${suffix}`);
     const listas = await json('api/salvoconductos.php');
     const vehiculo = listas.vehiculos.find(item => item.placa === `T${suffix}`);
     assert.ok(vehiculo);
@@ -73,6 +74,8 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.equal((await json('api/patrullas.php', { method: 'POST', body: entrega })).status, 'success');
     assert.equal((await json('api/patrullas.php')).data.find(item => item.placa === `T${suffix}`).tipo_inspeccion, 'Entrega');
     assert.ok(!(await json('api/salvoconductos.php')).patrullas_titulares.some(item => Number(item.id_usuario) === usuario));
+    assert.equal((await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero).patrulla_recibida, null);
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: inspeccion })).status, 'success');
 
     const invalido = formulario(numero, usuario, 'Pesca');
     invalido.set('foto_0', new Blob(['no es una imagen'], { type: 'image/png' }), 'falsa.png');
@@ -94,6 +97,9 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'success');
     const reporte = (await json('api/reportes.php')).data.find(item => item.numero_registro === numero);
     assert.equal(reporte.guias[0].identificador_plataforma, 'Guía A');
+    assert.equal(reporte.tipo_carga, 'Plataformas');
+    assert.equal(reporte.custodio_reporte, 'Prueba Uno');
+    assert.equal(reporte.patrulla_placa, `T${suffix}`);
     assert.equal(reporte.guias.length, 2);
     assert.deepEqual(reporte.guias[0].piscinas.map(item => item.libraje), ['2000.00', '1000.00']);
     assert.equal(reporte.guias[1].piscinas[0].libraje, '150.50');
@@ -103,10 +109,55 @@ test('rutas asignadas, reporte con foto, arribo y confirmación web comparten da
     assert.equal(foto.headers.get('content-type'), 'image/png');
     assert.deepEqual(Buffer.from(await foto.arrayBuffer()), png);
     assert.equal(reporte.guias[0].ruta_foto_guia, `../api/reportes_app.php?evidencia=${reporte.evidencias[0].id_evidencia}`);
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: entrega })).status, 'success');
+    assert.equal((await json('api/reportes.php')).data.find(item => item.numero_registro === numero).patrulla_placa, `T${suffix}`);
 
     assert.equal((await json('api/reportes_app.php', { method: 'POST', body: formulario(numero, usuario, 'Arribo a Destino') })).status, 'success');
     assert.equal((await json(`api/verificar_estado.php?ruta=${numero}`)).estado_ruta, 'En espera de confirmación');
     assert.equal((await json('api/reportes_app.php', { method: 'POST', body: formulario(numero, usuario, 'Pesca') })).status, 'error');
     assert.equal((await json('api/finalizar_ruta.php', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ numero_registro: numero }) })).status, 'success');
     assert.equal((await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero).estado_ruta, 'Finalizada');
+});
+
+test('contenedor requiere guía y movimiento sin piscinas y conserva la patrulla reportada', async () => {
+    const suffix = Date.now().toString().slice(-12);
+    const usuario = Number(sql(`INSERT INTO usuarios (cedula,nombres_completos,rol,password_hash) VALUES ('C${suffix}','Custodio Contenedor','Custodio','prueba'); SELECT LAST_INSERT_ID();`));
+    const numero = `CONT-${suffix}`;
+    const ruta = Number(sql(`INSERT INTO salvoconductos_rutas (numero_registro,tipo_viaje,origen,destino,estado_ruta) VALUES ('${numero}','CONTENEDORES','Puerto','Bodega','En Tránsito'); SELECT LAST_INSERT_ID();`));
+    sql(`INSERT INTO asignacion_personal_armas (id_ruta,id_usuario,rol_en_ruta) VALUES (${ruta},${usuario},'LÍDER/CHOFER');`);
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aX8AAAAASUVORK5CYII=', 'base64');
+    const inspeccion = new FormData();
+    for (const [key, value] of Object.entries({ usuario_id: String(usuario), tipo_inspeccion: 'Recepción', placa: `C${suffix}`, disco: '123' })) inspeccion.set(key, value);
+    inspeccion.set('foto_0', new Blob([png], { type: 'image/png' }), 'patrulla.png');
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: inspeccion })).status, 'success');
+    const rutaApp = (await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero);
+    assert.equal(rutaApp.tipo_viaje, 'CONTENEDORES');
+    assert.equal(rutaApp.patrulla_recibida.placa, `C${suffix}`);
+
+    const form = formulario(numero, usuario, 'Pesca');
+    form.set('origen', 'Puerto');
+    form.set('data_json', JSON.stringify([{ identificador: 'CONT-123', foto_campo: 'foto_0', piscinas: [] }]));
+    assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'error');
+    form.set('destino', 'Bodega');
+    assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'error');
+    form.set('foto_0', new Blob([png], { type: 'image/png' }), 'guia.png');
+    assert.equal((await json('api/reportes_app.php', { method: 'POST', body: form })).status, 'success');
+    const reporte = (await json('api/reportes.php')).data.find(item => item.numero_registro === numero);
+    assert.equal(reporte.tipo_carga, 'Contenedor');
+    assert.equal(reporte.origen_camaronera, 'Puerto');
+    assert.equal(reporte.destino_reporte, 'Bodega');
+    assert.equal(reporte.patrulla_placa, `C${suffix}`);
+    assert.equal(reporte.patrulla_disco, '123');
+    assert.equal(reporte.custodio_reporte, 'Custodio Contenedor');
+    assert.equal(reporte.guias[0].identificador_plataforma, 'CONT-123');
+    assert.deepEqual(reporte.guias[0].piscinas, []);
+    const foto = await fetch(new URL(reporte.guias[0].ruta_foto_guia.replace('../', ''), base));
+    assert.deepEqual(Buffer.from(await foto.arrayBuffer()), png);
+    inspeccion.set('placa', `N${suffix}`);
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: inspeccion })).status, 'success');
+    assert.equal((await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero).patrulla_recibida.placa, `N${suffix}`);
+    inspeccion.set('tipo_inspeccion', 'Entrega');
+    assert.equal((await json('api/patrullas.php', { method: 'POST', body: inspeccion })).status, 'success');
+    assert.equal((await json(`api/historial_app.php?usuario=${usuario}`)).data.find(item => item.numero_registro === numero).patrulla_recibida, null);
+    assert.equal((await json('api/reportes.php')).data.find(item => item.numero_registro === numero).patrulla_placa, `C${suffix}`);
 });

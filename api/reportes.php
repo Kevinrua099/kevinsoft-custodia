@@ -12,10 +12,12 @@ try {
               COALESCE(sr.numero_registro, 'Ruta General (Sin Salvoconducto)') as numero_registro, 
               COALESCE(v.placa, 'S/N') as placa, 
               COALESCE(v.disco, 'S/N') as disco, 
-              COALESCE(sr.estado_ruta, 'Activa') as estado_ruta
+              COALESCE(sr.estado_ruta, 'Activa') as estado_ruta,
+              u.nombres_completos AS custodio_reporte
               FROM reportes_pesca rp
               LEFT JOIN salvoconductos_rutas sr ON rp.id_ruta = sr.id_ruta
               LEFT JOIN vehiculos v ON sr.id_vehiculo = v.id_vehiculo
+              LEFT JOIN usuarios u ON rp.id_usuario_reporte = u.id_usuario
               ORDER BY rp.fecha_hora_reporte DESC";
 
     $stmt = $conexion->prepare($query);

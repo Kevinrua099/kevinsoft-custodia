@@ -19,6 +19,7 @@ data class LoginRequest(val cedula: String, val password: String)
 data class LoginUsuario(val nombres: String, val id: Int? = null)
 data class LoginResponse(val status: String, val mensaje: String, val usuario: LoginUsuario? = null)
 data class ApiResponse(val status: String, val mensaje: String)
+data class PatrullaRecibida(val placa: String? = null, val disco: String? = null)
 data class Ruta(
     @SerializedName("numero_registro") val numero: String,
     @SerializedName("fecha_emision") val fecha: String? = null,
@@ -26,7 +27,9 @@ data class Ruta(
     val destino: String? = null,
     @SerializedName("estado_ruta") val estado: String,
     val placa: String? = null,
-    val disco: String? = null
+    val disco: String? = null,
+    @SerializedName("tipo_viaje") val tipoViaje: String? = null,
+    @SerializedName("patrulla_recibida") val patrullaRecibida: PatrullaRecibida? = null
 )
 data class RutasResponse(val status: String, val mensaje: String? = null, val data: List<Ruta>? = null)
 data class FotoPatrulla(
@@ -68,6 +71,7 @@ interface ApiService {
         @Part("numero_registro") numeroRegistro: RequestBody,
         @Part("usuario_id") usuarioId: RequestBody,
         @Part("origen") origen: RequestBody,
+        @Part("destino") destino: RequestBody,
         @Part("data_json") dataJson: RequestBody,
         @Part("observaciones") observaciones: RequestBody,
         @Part("tipo_reporte") tipoReporte: RequestBody,

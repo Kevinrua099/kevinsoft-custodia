@@ -175,7 +175,7 @@ function renderizarFeed(reportes) {
             <div class="card-header bg-white d-flex align-items-center py-3" id="head_${idUnico}" data-bs-toggle="collapse" data-bs-target="#${idUnico}" style="cursor:pointer;">
                 <i class="fas fa-clipboard-list text-secondary fs-4 me-3"></i>
                 <h5 class="mb-0 fw-bold me-3 text-dark">${escaparHtml(ruta.numero_registro)}</h5>
-                <span class="badge bg-dark text-white px-3 py-2 rounded-pill me-2">Disco: ${escaparHtml(ruta.disco)} | Placa: ${escaparHtml(ruta.placa)}</span>
+                <span class="badge bg-dark text-white px-3 py-2 rounded-pill me-2">Vehículo del salvoconducto · Disco: ${escaparHtml(ruta.disco)} | Placa: ${escaparHtml(ruta.placa)}</span>
                 
                 ${botonAltaHtml}
                 
@@ -206,6 +206,8 @@ function renderizarFeed(reportes) {
                 </div>
                 
                 <p class="mb-2"><i class="fas fa-map-marker-alt text-danger me-1"></i> <strong>Ubicación:</strong> <span class="text-dark">${escaparHtml(evento.origen_camaronera || 'S/N')}</span></p>
+                ${evento.tipo_carga === 'Contenedor' ? `<p class="mb-2"><strong>Movimiento del contenedor:</strong> ${escaparHtml(evento.origen_camaronera || 'S/N')} → ${escaparHtml(evento.destino_reporte || 'S/N')}</p>` : ''}
+                ${evento.custodio_reporte ? `<p class="mb-2"><strong>Reportado por:</strong> ${escaparHtml(evento.custodio_reporte)} · <strong>Patrulla recibida:</strong> ${evento.patrulla_placa ? `Disco ${escaparHtml(evento.patrulla_disco || 'S/N')} | Placa ${escaparHtml(evento.patrulla_placa)}` : 'No registrada'}</p>` : ''}
                 
                 <div class="bg-white p-3 rounded shadow-sm border mb-3">
                     <p class="mb-1 text-muted"><i class="far fa-comment-dots"></i> <strong>Novedades / Observaciones:</strong></p>
@@ -214,12 +216,19 @@ function renderizarFeed(reportes) {
             `;
 
             if (evento.guias && evento.guias.length > 0) {
+                if (evento.tipo_carga === 'Plataformas') html += `<p class="fw-bold">Plataformas reportadas: ${evento.guias.length}</p>`;
                 evento.guias.forEach(guia => {
                     const totalPlataforma = (guia.piscinas || []).reduce((total, piscina) => total + (Number(piscina.libraje) || 0), 0);
                     html += `
                     <div class="mb-3 px-2">
                         <p class="fw-bold text-primary mb-2"><i class="fas fa-truck-loading me-1"></i> ${escaparHtml(guia.identificador_plataforma || 'S/N')}</p>
                         ${/^\.\.\/api\/reportes_app\.php\?evidencia=\d+$/.test(guia.ruta_foto_guia || '') ? `<img src="${guia.ruta_foto_guia}" alt="Foto de la guía" width="150" height="150" class="rounded object-fit-cover mb-2" onclick="abrirVisor(this.src, event)">` : ''}
+                    `;
+                    if (evento.tipo_carga === 'Contenedor') {
+                        html += `</div>`;
+                        return;
+                    }
+                    html += `
                         <table class="table table-sm table-bordered bg-white text-center shadow-sm">
                             <thead class="table-light">
                                 <tr><th>N° Piscina</th><th>Libraje</th></tr>

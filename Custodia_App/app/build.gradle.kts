@@ -14,13 +14,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        // Se puede cambiar con -PcustodiaApiBaseUrl para usar otro servidor.
-        val apiBaseUrl = providers.gradleProperty("custodiaApiBaseUrl")
-            .orElse("https://kevinsoft-custodia.onrender.com/api/").get()
-        require((apiBaseUrl.startsWith("http://") || apiBaseUrl.startsWith("https://")) && apiBaseUrl.endsWith("/")) {
-            "custodiaApiBaseUrl debe ser una URL HTTP(S) terminada en /."
-        }
-        buildConfigField("String", "API_BASE_URL", "\"${apiBaseUrl.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
+        // URL DIRECTA DE RENDER (Simplificada para evitar errores de sincronización de Gradle)
+        buildConfigField("String", "API_BASE_URL", "\"https://kevinsoft-custodia.onrender.com/api/\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -59,6 +54,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+
     // Navegación entre pantallas para Compose
     implementation("androidx.navigation:navigation-compose:2.7.7")
 
@@ -72,5 +68,6 @@ dependencies {
     // ViewModel para mantener los datos vivos al rotar la pantalla
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
 
+    // Coil para carga de imágenes
     implementation("io.coil-kt:coil-compose:2.5.0")
 }

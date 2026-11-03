@@ -73,10 +73,10 @@ Instala `Custodia_App/app/build/outputs/apk/debug/app-debug.apk` en el teléfono
 
 ### 4. Actualizar una instalación existente
 
-1. Ejecuta `database/patrullas_entrega_migration.sql` una sola vez en la base de datos usada por el servicio. Si aún no se habían instalado las fotos, ejecuta también `database/reportes_fotos_migration.sql` y `database/patrullas_migration.sql`. Estas migraciones conservan los datos existentes.
+1. Ejecuta `database/patrullas_entrega_migration.sql` y luego `database/reportes_custodia_migration.sql` una sola vez en la base de datos usada por el servicio. Si ya ejecutaste la primera, aplica solo la nueva. Si aún no se habían instalado las fotos, ejecuta también `database/reportes_fotos_migration.sql` y `database/patrullas_migration.sql`. Estas migraciones conservan los datos existentes.
 2. Publica los cambios de `api/` y `web/` en el servicio de Render y espera a que termine el despliegue. La app nueva necesita la API actualizada para identificar al usuario y sus rutas.
 3. Instala el APK nuevo e inicia sesión de nuevo. En la app, registra la recepción de la patrulla con al menos una foto. Al seleccionar a ese usuario como líder/chofer del salvoconducto, se propone su patrulla disponible y se puede elegir otra en el selector. La entrega también se registra en la app con fotos; ambas inspecciones aparecen en **Control de Patrullas**. Las inspecciones antiguas sin usuario identificado no generan una propuesta automática.
-4. Asigna al usuario como chofer o custodio para que la ruta aparezca en **Custodia en ruta**. En Inicio de Ruta o Pesca, agrega cada plataforma con su foto de guía y una o más piscinas con su libraje. Las fotos, los datos y los totales reportados se ven en **Reportes en Ruta**. Después de notificar el arribo, la web puede finalizar la ruta y la app actualizará el estado.
+4. Asigna al usuario como chofer o custodio para que la ruta aparezca en **Custodia en ruta**. En una ruta terrestre o fluvial, agrega cada plataforma con su foto de guía y una o más piscinas con su libraje. En una ruta de contenedores, informa origen, destino y foto de guía. La app toma la patrulla de la última recepción vigente del usuario; si no existe, avisa y el reporte queda sin patrulla. La web muestra los datos y la patrulla guardada en cada reporte. Después de notificar el arribo, la web puede finalizar la ruta y la app actualizará el estado.
 
 ## Prueba de integración local
 

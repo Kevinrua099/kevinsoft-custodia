@@ -20,10 +20,7 @@ try {
             JOIN vehiculos v ON v.placa = i.placa AND v.estado = 'Disponible'
             WHERE i.id_usuario IS NOT NULL AND i.tipo_inspeccion = 'Recepción'
             AND i.id_inspeccion = (SELECT MAX(ultima.id_inspeccion) FROM inspeccion_vehiculos ultima WHERE ultima.placa = i.placa)
-            AND NOT EXISTS (SELECT 1 FROM inspeccion_vehiculos otra
-                JOIN vehiculos vo ON vo.placa = otra.placa AND vo.estado = 'Disponible'
-                WHERE otra.id_usuario = i.id_usuario AND otra.tipo_inspeccion = 'Recepción' AND otra.id_inspeccion > i.id_inspeccion
-                AND otra.id_inspeccion = (SELECT MAX(u.id_inspeccion) FROM inspeccion_vehiculos u WHERE u.placa = otra.placa))");
+            AND i.id_inspeccion = (SELECT MAX(recepcion.id_inspeccion) FROM inspeccion_vehiculos recepcion WHERE recepcion.id_usuario = i.id_usuario AND recepcion.tipo_inspeccion = 'Recepción')");
         
         echo json_encode([
             "status" => "success", 

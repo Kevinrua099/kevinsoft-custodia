@@ -13,7 +13,8 @@ import com.example.custodia_app.screens.LoginScreen
 import com.example.custodia_app.screens.MenuScreen
 import com.example.custodia_app.screens.PatrullasScreen
 import com.example.custodia_app.screens.ReporteScreen
-import com.example.custodia_app.ui.theme.Custodia_AppTheme // Asegúrate de que el nombre del tema coincida con el tuyo
+import com.example.custodia_app.screens.MovimientoInternoScreen // <-- IMPORTA LA NUEVA PANTALLA
+import com.example.custodia_app.ui.theme.Custodia_AppTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,13 +24,14 @@ class MainActivity : ComponentActivity() {
                 Surface(color = MaterialTheme.colorScheme.background) {
                     val navController = rememberNavController()
 
-                    // Mapa de Navegación de la App
                     NavHost(navController = navController, startDestination = "login") {
                         composable("login") { LoginScreen(navController) }
                         composable("menu") { MenuScreen(navController) }
                         composable("patrullas") { PatrullasScreen(navController) }
                         composable("inspeccion") { InspeccionScreen(navController) }
                         composable("reporte") { ReporteScreen(navController) }
+                        // NUEVA RUTA PARA MOVIMIENTOS INTERNOS
+                        composable("movimientos") { MovimientoInternoScreen(navController) }
                     }
                 }
             }

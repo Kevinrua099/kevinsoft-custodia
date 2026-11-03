@@ -3,6 +3,7 @@ header('Access-Control-Allow-Origin: *');
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/conexion.php';
+require_once __DIR__ . '/patrulla_actual.php';
 
 try {
     $conexion = conectarBD();
@@ -12,7 +13,7 @@ try {
         echo json_encode(['status' => 'error', 'mensaje' => 'Inicia sesión para consultar tus rutas.']);
         exit;
     }
-    $query = "SELECT s.numero_registro, s.fecha_emision, s.origen, s.destino, s.estado_ruta,
+    $query = "SELECT s.numero_registro, s.fecha_emision, s.origen, s.destino, s.estado_ruta, s.tipo_viaje,
                      v.placa, v.disco 
               FROM salvoconductos_rutas s 
               LEFT JOIN vehiculos v ON s.id_vehiculo = v.id_vehiculo
@@ -23,6 +24,9 @@ try {
     $stmt = $conexion->prepare($query);
     $stmt->execute([$usuario]);
     $historial = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $patrulla = patrullaActual($conexion, $usuario);
+    foreach ($historial as &$ruta) $ruta['patrulla_recibida'] = $patrulla;
+    unset($ruta);
 
     echo json_encode(["status" => "success", "data" => $historial]);
 

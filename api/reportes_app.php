@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/conexion.php';
+require_once __DIR__ . '/patrulla_actual.php';
 
 function rechazarReporte(string $mensaje): void {
     echo json_encode(['status' => 'error', 'mensaje' => $mensaje]);
@@ -30,21 +31,28 @@ try {
     $numero = trim($_POST['numero_registro'] ?? '');
     $usuario = filter_var($_POST['usuario_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
     $origen = trim($_POST['origen'] ?? '');
+    $destino = trim($_POST['destino'] ?? '');
     $observaciones = trim($_POST['observaciones'] ?? '');
     $tipo = trim($_POST['tipo_reporte'] ?? '');
     $plataformas = json_decode($_POST['data_json'] ?? '[]', true);
     if ($numero === '' || strlen($numero) > 50 || !$usuario) rechazarReporte('Selecciona una ruta asignada.');
-    if (strlen($origen) > 100 || !in_array($tipo, ['Inicio de Ruta', 'Pesca', 'Novedad en Vía', 'Arribo a Destino'], true)) rechazarReporte('Datos del reporte no válidos.');
+    if (strlen($origen) > 100 || strlen($destino) > 100 || !in_array($tipo, ['Inicio de Ruta', 'Pesca', 'Novedad en Vía', 'Arribo a Destino'], true)) rechazarReporte('Datos del reporte no válidos.');
     if ($tipo === 'Novedad en Vía' && $observaciones === '') rechazarReporte('Describe la novedad.');
+    $consultaRuta = $conexion->prepare('SELECT s.id_ruta, s.estado_ruta, s.tipo_viaje FROM salvoconductos_rutas s WHERE s.numero_registro = ? AND EXISTS (SELECT 1 FROM asignacion_personal_armas a WHERE a.id_ruta = s.id_ruta AND a.id_usuario = ?)');
+    $consultaRuta->execute([$numero, $usuario]);
+    $ruta = $consultaRuta->fetch(PDO::FETCH_ASSOC);
+    if (!$ruta || !in_array($ruta['estado_ruta'], ['Activa', 'En Tránsito'], true)) rechazarReporte('La ruta no está asignada o ya no acepta reportes. Actualiza tus rutas.');
     if (!is_array($plataformas) || count($plataformas) > 8) rechazarReporte('Las plataformas no son válidas.');
     $esCarga = in_array($tipo, ['Inicio de Ruta', 'Pesca'], true);
-    if ($esCarga && count($plataformas) === 0) rechazarReporte('Agrega al menos una plataforma.');
+    $esContenedor = strtoupper(trim($ruta['tipo_viaje'] ?? '')) === 'CONTENEDORES';
+    if ($esCarga && count($plataformas) === 0) rechazarReporte($esContenedor ? 'Agrega la guía del contenedor.' : 'Agrega al menos una plataforma.');
+    if ($esCarga && $esContenedor && (count($plataformas) !== 1 || $origen === '' || $destino === '')) rechazarReporte('Indica el origen y destino del contenedor y adjunta su guía.');
     if (!$esCarga && count($plataformas) !== 0) rechazarReporte('Este tipo de reporte no admite plataformas.');
     $camposFotos = [];
     foreach ($plataformas as $plat) {
-        if (!is_array($plat) || !isset($plat['identificador'], $plat['piscinas']) || !is_string($plat['identificador']) || trim($plat['identificador']) === '' || strlen($plat['identificador']) > 50 || !is_array($plat['piscinas']) || count($plat['piscinas']) < 1 || count($plat['piscinas']) > 50) rechazarReporte('Revisa los datos de las plataformas.');
+        if (!is_array($plat) || !isset($plat['identificador'], $plat['piscinas']) || !is_string($plat['identificador']) || trim($plat['identificador']) === '' || strlen($plat['identificador']) > 50 || !is_array($plat['piscinas']) || count($plat['piscinas']) > 50 || ($esContenedor ? count($plat['piscinas']) !== 0 : count($plat['piscinas']) < 1)) rechazarReporte($esContenedor ? 'Revisa los datos del contenedor.' : 'Revisa los datos de las plataformas.');
         $campo = $plat['foto_campo'] ?? '';
-        if (!is_string($campo) || !preg_match('/^foto_[0-7]$/', $campo) || in_array($campo, $camposFotos, true)) rechazarReporte('Cada plataforma debe tener su propia foto de guía.');
+        if (!is_string($campo) || !preg_match('/^foto_[0-7]$/', $campo) || in_array($campo, $camposFotos, true)) rechazarReporte('Adjunta una foto para cada guía.');
         $camposFotos[] = $campo;
         foreach ($plat['piscinas'] as $piscina) {
             if (!is_array($piscina)) rechazarReporte('Revisa los datos de las piscinas.');
@@ -65,20 +73,25 @@ try {
     }
     if (count($archivos) > 8) rechazarReporte('Puedes adjuntar hasta 8 fotos.');
     foreach ($camposFotos as $campo) {
-        if (!isset($archivos[$campo])) rechazarReporte('Adjunta una foto de la guía de cada plataforma.');
+        if (!isset($archivos[$campo])) rechazarReporte('Adjunta una foto de cada guía.');
     }
 
     $conexion->beginTransaction();
-    $consulta = $conexion->prepare('SELECT s.id_ruta, s.estado_ruta FROM salvoconductos_rutas s WHERE s.numero_registro = ? AND EXISTS (SELECT 1 FROM asignacion_personal_armas a WHERE a.id_ruta = s.id_ruta AND a.id_usuario = ?) FOR UPDATE');
+    $consulta = $conexion->prepare('SELECT s.id_ruta, s.estado_ruta, s.tipo_viaje FROM salvoconductos_rutas s WHERE s.numero_registro = ? AND EXISTS (SELECT 1 FROM asignacion_personal_armas a WHERE a.id_ruta = s.id_ruta AND a.id_usuario = ?) FOR UPDATE');
     $consulta->execute([$numero, $usuario]);
     $ruta = $consulta->fetch(PDO::FETCH_ASSOC);
     if (!$ruta || !in_array($ruta['estado_ruta'], ['Activa', 'En Tránsito'], true)) {
         $conexion->rollBack();
         rechazarReporte('La ruta no está asignada o ya no acepta reportes. Actualiza tus rutas.');
     }
+    if ($esContenedor !== (strtoupper(trim($ruta['tipo_viaje'] ?? '')) === 'CONTENEDORES')) {
+        $conexion->rollBack();
+        rechazarReporte('El tipo de ruta cambió. Actualiza la ruta antes de enviar.');
+    }
     $idRuta = $ruta['id_ruta'];
-    $stmt = $conexion->prepare('INSERT INTO reportes_pesca (id_ruta, origen_camaronera, observaciones, tipo_reporte, fecha_hora_reporte) VALUES (?, ?, ?, ?, NOW())');
-    $stmt->execute([$idRuta, $origen, $observaciones, $tipo]);
+    $patrulla = patrullaActual($conexion, $usuario);
+    $stmt = $conexion->prepare('INSERT INTO reportes_pesca (id_ruta, origen_camaronera, destino_reporte, tipo_carga, id_usuario_reporte, patrulla_placa, patrulla_disco, observaciones, tipo_reporte, fecha_hora_reporte) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())');
+    $stmt->execute([$idRuta, $origen, $esCarga && $esContenedor ? $destino : null, $esCarga ? ($esContenedor ? 'Contenedor' : 'Plataformas') : null, $usuario, $patrulla['placa'] ?? null, $patrulla['disco'] ?? null, $observaciones, $tipo]);
     $idReporte = $conexion->lastInsertId();
 
     $idsFotos = [];
